@@ -33,8 +33,7 @@ public class PingContainer extends Container2<PingContainer, SszUInt64, SszByteL
 
     public static PingContainer decodePacket(Bytes packet) {
         PingSchema schema = PingSchema.INSTANCE;
-        PingContainer decodedPacket = schema.sszDeserialize(packet);
-        return decodedPacket;
+        return schema.sszDeserialize(packet);
     }
 
 

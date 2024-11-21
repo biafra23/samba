@@ -2,43 +2,44 @@ package samba.schema.content;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import samba.schema.messages.ssz.containers.PingContainer;
 import tech.pegasys.teku.infrastructure.ssz.containers.Container1;
 import tech.pegasys.teku.infrastructure.ssz.containers.ContainerSchema1;
 import tech.pegasys.teku.infrastructure.ssz.primitive.SszBytes32;
+import tech.pegasys.teku.infrastructure.ssz.primitive.SszUInt64;
 import tech.pegasys.teku.infrastructure.ssz.schema.SszPrimitiveSchemas;
 import tech.pegasys.teku.infrastructure.ssz.tree.TreeNode;
+import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 
-public class BlockHeaderKeyContainer extends Container1<BlockHeaderKeyContainer, SszBytes32> {
+public class BlockNumberKeyContainer extends Container1<BlockNumberKeyContainer, SszUInt64> {
 
-    protected BlockHeaderKeyContainer(Bytes32 block_hash) {
-        super(BlockHeaderKeySchema.INSTANCE, SszBytes32.of(block_hash));
+    protected BlockNumberKeyContainer(UInt64 block_number) {
+        super(BlockNumberKeySchema.INSTANCE, SszUInt64.of(block_number));
     }
 
-    public BlockHeaderKeyContainer(TreeNode backingNode) {
-        super(BlockHeaderKeySchema.INSTANCE, backingNode);
+    public BlockNumberKeyContainer(TreeNode backingNode) {
+        super(BlockNumberKeySchema.INSTANCE, backingNode);
     }
 
-    public Bytes32 getBlockHash() {
+    public UInt64 getBlockNumber() {
         return getField0().get();
     }
 
-    public static BlockHeaderKeyContainer  decodeBlockHeaderKey(Bytes packet ) {
-        BlockHeaderKeyContainer.BlockHeaderKeySchema schema = BlockHeaderKeyContainer.BlockHeaderKeySchema.INSTANCE;
+    public static BlockNumberKeyContainer decodeBlockNumberKey(Bytes packet) {
+        BlockNumberKeyContainer.BlockNumberKeySchema schema = BlockNumberKeyContainer.BlockNumberKeySchema.INSTANCE;
         return schema.sszDeserialize(packet);
     }
 
-    public static class BlockHeaderKeySchema extends ContainerSchema1<BlockHeaderKeyContainer, SszBytes32> {
+    public static class BlockNumberKeySchema extends ContainerSchema1<BlockNumberKeyContainer, SszUInt64> {
 
-        public static final BlockHeaderKeyContainer.BlockHeaderKeySchema INSTANCE = new BlockHeaderKeyContainer.BlockHeaderKeySchema();
+        public static final BlockNumberKeyContainer.BlockNumberKeySchema INSTANCE = new BlockNumberKeyContainer.BlockNumberKeySchema();
 
-        protected BlockHeaderKeySchema() {
-            super(SszPrimitiveSchemas.BYTES32_SCHEMA);
+        protected BlockNumberKeySchema() {
+            super(SszPrimitiveSchemas.UINT64_SCHEMA);
         }
 
         @Override
-        public BlockHeaderKeyContainer createFromBackingNode(TreeNode node) {
-            return new BlockHeaderKeyContainer(node);
+        public BlockNumberKeyContainer createFromBackingNode(TreeNode node) {
+            return new BlockNumberKeyContainer(node);
         }
     }
 }

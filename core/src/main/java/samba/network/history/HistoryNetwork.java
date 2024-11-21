@@ -127,7 +127,7 @@ public class HistoryNetwork extends BaseNetwork implements HistoryNetworkRequest
                                     /*
                                     Open a uTP Connection on this port content.getConnectionId()
                                     SafeFuture.runAsync(() -> {
-                                    //TODO async UTP opperation once we get the specific content we should call    historyDB.saveContent(
+                                    //TODO async UTP operation once we get the specific content we should call    historyDB.saveContent(
                                     });*/
                                 }
                                 case Content.CONTENT_TYPE -> {
@@ -225,7 +225,8 @@ public class HistoryNetwork extends BaseNetwork implements HistoryNetworkRequest
         Optional<byte[]> content = historyDB.get(contentType, value);
         if (content.isEmpty()) {
             //TODO return list of ENRs that we know of that are closest to the requested content
-            /*If the node does not hold the requested content, and the node does not know of any nodes with eligible ENR values, then the node MUST return enrs as an empty list.*/
+            /*If the node does not hold the requested content, and the node does not know of any nodes with
+            //eligible ENR values, then the node MUST return enrs as an empty list.*/
             return new Content(List.of());
         }
         if (content.get().length > PortalWireMessage.MAX_CUSTOM_PAYLOAD_BYTES) {

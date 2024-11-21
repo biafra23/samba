@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 public class RLPDecoder {
 
-    //enr is in base64
+    //enr should be in base64
     public static String decodeRlpEnr(String enr) {
             byte[] decodedBytes = Base64.getUrlDecoder().decode(enr);
             Bytes decodedENR = RLP.decodeValue(Bytes.wrap(decodedBytes));
