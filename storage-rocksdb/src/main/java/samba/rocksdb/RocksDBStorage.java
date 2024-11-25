@@ -12,17 +12,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package samba.storage.rocksdb;
+package samba.rocksdb;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
-
-
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

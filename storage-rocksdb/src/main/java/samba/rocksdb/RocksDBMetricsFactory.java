@@ -12,11 +12,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package samba.storage.rocksdb;
+package samba.rocksdb;
 
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.metrics.prometheus.PrometheusMetricsSystem;
-
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
@@ -26,6 +25,7 @@ import org.rocksdb.RocksDBException;
 import org.rocksdb.Statistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 /** The Rocks db metrics factory. */
 public class RocksDBMetricsFactory {

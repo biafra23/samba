@@ -1,10 +1,11 @@
-package samba.storage.rocksdb;
+package samba.rocksdb;
 
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.TransactionDB;
 import org.rocksdb.WriteOptions;
+
 
 import java.util.List;
 
@@ -28,6 +29,11 @@ public class RocksDBInstance extends RocksDBStorage {
 
     RocksDB getDB() {
         return transactionDB;
+    }
+
+    @Override
+    public boolean containsKey(Segment segment, byte[] key) throws StorageException {
+        return super.containsKey(segment, key);
     }
 
     @Override

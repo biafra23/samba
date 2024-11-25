@@ -1,7 +1,9 @@
-package samba.rocksdb;
+package rocksdb;
 
 
-import samba.storage.rocksdb.Segment;
+
+
+import samba.rocksdb.Segment;
 
 import java.nio.charset.StandardCharsets;
 

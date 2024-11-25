@@ -1,5 +1,5 @@
 plugins {
-    id 'samba.java-common-conventions'
+    id 'samba.java-application-conventions'
 }
 
 dependencies {
@@ -34,11 +34,12 @@ dependencies {
     implementation libs.oshi.core
     implementation libs.assertj.core
     implementation libs.mockito.core
-    implementation libs.rocksdbjni
+    /*implementation libs.rocksdbjni*/
     implementation libs.prometheus.simpleclient
     implementation libs.jackson.dataformat.yaml
     implementation libs.jackson.datatype.jdk8
 
+    implementation project(':storage-rocksdb')
 
 
     compileOnly libs.projectlombok

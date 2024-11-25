@@ -10,7 +10,8 @@ import org.hyperledger.besu.ethereum.core.BlockWithReceipts;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import samba.domain.content.ContentType;
 import samba.domain.content.ContentUtil;
-import samba.storage.rocksdb.*;
+import samba.rocksdb.*;
+
 
 import java.nio.file.Path;
 import java.util.Arrays;

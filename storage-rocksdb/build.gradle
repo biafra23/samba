@@ -1,0 +1,31 @@
+plugins {
+    id 'samba.java-library-conventions'
+}
+
+dependencies {
+
+    implementation libs.log4j.api
+    implementation libs.log4j.core
+    implementation 'com.google.guava:guava:33.3.1-jre'
+
+    implementation libs.besu.internal.metrics.core
+    implementation libs.rocksdbjni
+    implementation libs.oshi.core
+    implementation libs.prometheus.simpleclient
+
+    implementation libs.besu.internal.config
+    implementation libs.besu.internal.plugin.api //TODO need to be removed
+    implementation libs.besu.internal.rlp
+
+    implementation libs.assertj.core
+    implementation libs.mockito.core
+
+
+    compileOnly libs.projectlombok
+    annotationProcessor libs.projectlombok
+    testCompileOnly libs.projectlombok
+    testAnnotationProcessor libs.projectlombok
+    testImplementation libs.junit.jupiter.api
+    testImplementation libs.assertj.core
+    testRuntimeOnly libs.junit.jupiter.engine
+}

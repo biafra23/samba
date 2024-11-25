@@ -1,8 +1,7 @@
-package samba.storage.rocksdb;
+package samba.rocksdb;
 
 
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
-
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Transaction;

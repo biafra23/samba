@@ -2,4 +2,5 @@ rootProject.name = 'samba'
 include 'core'
 include 'execution-state-network'
 include 'execution-history-network'
+include 'storage-rocksdb'
 

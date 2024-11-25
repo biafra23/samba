@@ -1,4 +1,4 @@
-package samba.storage.rocksdb;
+package samba.rocksdb;
 
 public class StorageException extends RuntimeException {
 
