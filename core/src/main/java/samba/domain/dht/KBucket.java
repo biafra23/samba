@@ -113,7 +113,7 @@ class KBucket {
     private void promotePendingNode() {
         pendingNode.ifPresent(
                 pendingEntry -> {
-                    nodes.addFirst(pendingEntry);
+                    nodes.add(0, pendingEntry);
                     pendingNode = Optional.empty();
                 });
     }
@@ -145,16 +145,16 @@ class KBucket {
                 }
             }
         } else {
-            nodes.addFirst(new BucketEntry(livenessManager, newNode, currentTime));
+            nodes.add(0, new BucketEntry(livenessManager, newNode, currentTime));
         }
     }
 
     private void updateExistingEntry(BucketEntry existingEntry, final NodeRecord newRecord) {
         nodes.remove(existingEntry);
         if (itsNewEntry(existingEntry, newRecord)) {
-            nodes.addFirst(new BucketEntry(livenessManager, newRecord, clock.millis()));
+            nodes.add(0, new BucketEntry(livenessManager, newRecord, clock.millis()));
         }else{
-            nodes.addFirst(new BucketEntry(livenessManager, existingEntry.getNode(), clock.millis()));
+            nodes.add(0, new BucketEntry(livenessManager, existingEntry.getNode(), clock.millis()));
         }
     }
 

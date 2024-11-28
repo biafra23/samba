@@ -39,7 +39,7 @@ public class HistoryRocksDB implements HistoryDB {
         LOG.info("Store {} with Key: {} and Value {}", contentType, contentKey, value);
         try {
             switch (contentType) {
-                case ContentType.BLOCK_HEADER -> {
+                case BLOCK_HEADER: {
                     Bytes blockHash = contentKey.slice(1, contentKey.size()); //blockHash is in ssz.
                     //block_header_with_proof = BlockHeaderWithProof(header: rlp.encode(header), proof: proof)
                     if (!ContentUtil.isBlockHeaderValid(blockHash, value)) {
@@ -48,7 +48,7 @@ public class HistoryRocksDB implements HistoryDB {
                     }
                     save(KeyValueSegment.BLOCK_HEADER, blockHash, value);  //TODO async
                 }
-                case ContentType.BLOCK_BODY -> {
+                case BLOCK_BODY: {
                     Bytes blockHash = contentKey.slice(1, contentKey.size()); //blockHash is in ssz.
                     this.getBlockHeaderByBlockHash(blockHash).ifPresentOrElse(blockHeader -> {
                         if (!ContentUtil.isBlockBodyValid(blockHeader, value)) {
@@ -61,12 +61,12 @@ public class HistoryRocksDB implements HistoryDB {
                         LOG.info("Block Header for {} not found locally", blockHash);
                     });
                 }
-                case ContentType.RECEIPT -> {
+                case RECEIPT: {
                     Bytes blockHashInSSZ = contentKey.slice(1, contentKey.size());
                     //TODO should we do any validation?
                     save(KeyValueSegment.RECEIPT, blockHashInSSZ, value);
                 }
-                case ContentType.BLOCK_HEADER_BY_NUMBER -> {
+                case BLOCK_HEADER_BY_NUMBER: {
                     Bytes blockNumberInSSZ = contentKey.slice(1, contentKey.size());
                     if (!ContentUtil.isBlockHeaderValid(blockNumberInSSZ, value)) {
                         LOG.info("BlockHeader for blockNumber: {} is invalid", blockNumberInSSZ);
@@ -78,7 +78,7 @@ public class HistoryRocksDB implements HistoryDB {
                     save(KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER, blockNumber, blockHash);
                     save(KeyValueSegment.BLOCK_HEADER, blockHash, value);
                 }
-                default ->
+                default:
                         throw new IllegalArgumentException(String.format("CONTENT: Invalid payload type {}", contentType));
             }
             return true;
@@ -125,12 +125,18 @@ public class HistoryRocksDB implements HistoryDB {
     }
 
     private Segment getSegmentFromContentType(ContentType contentType) {
-        return switch(contentType) {
-            case ContentType.BLOCK_HEADER -> KeyValueSegment.BLOCK_HEADER;
-            case ContentType.BLOCK_BODY -> KeyValueSegment.BLOCK_BODY;
-            case ContentType.RECEIPT -> KeyValueSegment.RECEIPT;
-            case ContentType.BLOCK_HEADER_BY_NUMBER ->  KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER;
-        };
+        switch (contentType) {
+            case BLOCK_HEADER:
+                return KeyValueSegment.BLOCK_HEADER;
+            case BLOCK_BODY:
+                return KeyValueSegment.BLOCK_BODY;
+            case RECEIPT:
+                return KeyValueSegment.RECEIPT;
+            case BLOCK_HEADER_BY_NUMBER:
+                return KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER;
+            default:
+                throw new IllegalArgumentException("Unexpected value: " + contentType);
+        }
     }
 
     public void close() {

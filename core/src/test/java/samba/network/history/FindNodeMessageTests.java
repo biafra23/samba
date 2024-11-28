@@ -59,7 +59,7 @@ public class FindNodeMessageTests {
         Nodes nodes = historyNetwork.findNodes(createNodeRecord(), new FindNodes(Set.of(256, 255))).get().get();
 
         assertEquals(1, nodes.getTotal());
-        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().getFirst().replace("=", ""));
+        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().get(0).replace("=", ""));
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(discv5Client, times(1)).sendDisv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class));
@@ -78,8 +78,8 @@ public class FindNodeMessageTests {
         Nodes nodes = historyNetwork.findNodes(requestingNodeRecord, new FindNodes(Set.of(256, 255))).get().get();
 
         assertEquals(1, nodes.getTotal());
-        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().getFirst().replace("=", ""));
-        assertEquals(requestingNodeRecord.asBase64(), nodes.getEnrList().getLast().replace("=", ""));
+        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().get(0).replace("=", ""));
+        assertEquals(requestingNodeRecord.asBase64(), nodes.getEnrList().get(nodes.getEnrList().size() - 1).replace("=", ""));
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(discv5Client, times(1)).sendDisv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class));
@@ -98,8 +98,8 @@ public class FindNodeMessageTests {
         Nodes nodes = historyNetwork.findNodes(createNodeRecord(), new FindNodes(Set.of(256, 255))).get().get();
 
         assertEquals(1, nodes.getTotal());
-        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().getFirst().replace("=", ""));
-        assertEquals(newHomeRecord.asBase64(), nodes.getEnrList().getLast().replace("=", ""));
+        assertEquals(homeNodeRecord.asBase64(), nodes.getEnrList().get(0).replace("=", ""));
+        assertEquals(newHomeRecord.asBase64(), nodes.getEnrList().get(nodes.getEnrList().size() - 1).replace("=", ""));
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(discv5Client, times(2)).sendDisv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class));
@@ -116,7 +116,7 @@ public class FindNodeMessageTests {
 
 
         assertEquals(MessageType.NODES, portalWireMessage.getMessageType());
-        assertEquals(homeNodeRecord.asEnr(), ((Nodes)portalWireMessage.getMessage()).getEnrList().getFirst());
+        assertEquals(homeNodeRecord.asEnr(), ((Nodes)portalWireMessage.getMessage()).getEnrList().get(0));
     }
 
     
