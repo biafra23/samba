@@ -1,5 +1,5 @@
 [versions]
-tuweni = "2.3.1"
+tuweni = "2.4.2"
 log4j= "2.23.1"
 vertex= "4.5.9"
 besuInternal = "24.5.2"
