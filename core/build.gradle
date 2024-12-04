@@ -1,10 +1,10 @@
 plugins {
-    id 'samba.java-common-conventions'
+    id 'samba.java-application-conventions'
 }
 
 dependencies {
-    implementation libs.log4j.api
-    implementation libs.log4j.core
+    implementation libs.apache.logging.log4j.api
+    implementation libs.apache.logging.log4j.core
     implementation libs.tuweni.bytes
     implementation libs.tuweni.crypto
     implementation libs.tuweni.rlp
@@ -38,8 +38,10 @@ dependencies {
     implementation libs.prometheus.simpleclient
     implementation libs.jackson.dataformat.yaml
     implementation libs.jackson.datatype.jdk8
+    implementation libs.jvm.libp2p
 
-
+    implementation project(':storage-rocksdb')
+    implementation project(':server-json-rpc')
 
     compileOnly libs.projectlombok
     annotationProcessor libs.projectlombok
