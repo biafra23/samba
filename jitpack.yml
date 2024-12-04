@@ -1,0 +1,15 @@
+jdk:
+  - openjdk21
+
+before_install:
+  - echo "Running before install steps"
+
+before_script:
+  - echo "Running before script steps"
+
+after_success:
+  - echo "Build succeeded, fnord"
+
+after_failure:
+  - echo "Build failed, fnord"
+
