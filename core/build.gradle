@@ -52,3 +52,12 @@ dependencies {
 application {
     mainClass = 'samba.Samba'
 }
+
+allprojects {
+    configurations.all {
+        exclude group: 'io.tmio', module: 'tuweni-rlp'
+        exclude group: 'io.tmio', module: 'tuweni-crypto'
+        exclude group: 'io.tmio', module: 'tuweni-bytes'
+        exclude group: 'io.tmio', module: 'tuweni-units'
+    }
+}
