@@ -34,10 +34,9 @@ import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 import org.jetbrains.annotations.NotNull;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
-import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 
 public class HistoryNetwork extends BaseNetwork
-    implements HistoryNetworkRequests, HistoryNetworkIncomingRequests, LivenessChecker {
+    implements HistoryJsonRpcRequests, HistoryNetworkIncomingRequests, LivenessChecker {
 
   private UInt256 nodeRadius;
   private final HistoryDB historyDB;
@@ -50,13 +49,12 @@ public class HistoryNetwork extends BaseNetwork
     this.routingTable = new HistoryRoutingTable(client.getHomeNodeRecord(), this);
     this.historyDB = historyDB;
     this.nodeRecordFactory = new NodeRecordFactory(new IdentitySchemaV4Interpreter());
-    LOG.info("Home Record :{}", client.getHomeNodeRecord().asEnr());
   }
 
   @Override
   public SafeFuture<Optional<Pong>> ping(NodeRecord nodeRecord, Ping message) {
     return sendMessage(nodeRecord, message)
-        .orTimeout(30, TimeUnit.SECONDS)
+        .orTimeout(5, TimeUnit.SECONDS)
         .thenApply(Optional::get)
         .thenCompose(
             pongMessage -> {
@@ -175,14 +173,30 @@ public class HistoryNetwork extends BaseNetwork
   }
 
   @Override
-  public SafeFuture<String> connect(NodeRecord nodeRecord) {
+  public void addEnr(String enr) {
+    final NodeRecord nodeRecord = NodeRecordFactory.DEFAULT.fromEnr(enr);
+    this.routingTable.addOrUpdateNode(nodeRecord);
+  }
+
+  @Override
+  public Optional<String> getEnr(String nodeId) {
+    Bytes nodeIdInBytes = Bytes.fromHexString(nodeId);
+    final NodeRecord homeNodeRecord = this.discv5Client.getHomeNodeRecord();
+    if (homeNodeRecord == null) {
+      return Optional.empty();
+    }
+    if (homeNodeRecord.getNodeId().equals(nodeIdInBytes)) {
+      return Optional.of(homeNodeRecord.asEnr());
+    }
+    Optional<NodeRecord> nodeRecord = this.routingTable.findNode(nodeIdInBytes);
+
+    return nodeRecord.map(NodeRecord::asEnr);
+  }
+
+  @Override
+  public SafeFuture<Optional<Pong>> ping(NodeRecord nodeRecord) {
     Ping ping = new Ping(nodeRecord.getSeq(), this.nodeRadius.toBytes());
-    return this.ping(nodeRecord, ping)
-        .thenApply(Optional::get)
-        .thenCompose(
-            pong -> {
-              return SafeFuture.completedFuture(pong.getEnrSeq().toString());
-            });
+    return this.ping(nodeRecord, ping);
   }
 
   @Override
@@ -275,8 +289,7 @@ public class HistoryNetwork extends BaseNetwork
   @Override
   public CompletableFuture<Void> checkLiveness(NodeRecord nodeRecord) {
     LOG.info("checkLiveness");
-    Ping pingMessage =
-        new Ping(UInt64.valueOf(nodeRecord.getSeq().toBytes().toLong()), this.nodeRadius);
+    Ping pingMessage = new Ping(nodeRecord.getSeq(), this.nodeRadius);
     return CompletableFuture.supplyAsync(() -> this.ping(nodeRecord, pingMessage))
         .thenCompose((__) -> new CompletableFuture<>());
   }

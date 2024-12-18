@@ -57,7 +57,6 @@ public class ConnectionService extends Service {
 
   @Override
   protected SafeFuture<?> doStart() {
-    LOG.info("Starting ConnectionService");
     activeNodesSearchingTask();
     return SafeFuture.COMPLETE;
   }
@@ -87,7 +86,7 @@ public class ConnectionService extends Service {
                     .collect(Collectors.toSet())
                     .forEach(this::connectToPeers);
               } else {
-                LOG.info("Discovery failed", error);
+                LOG.trace("Discovery failed", error);
                 // TODO  What to do ?
               }
               return null;
@@ -99,10 +98,10 @@ public class ConnectionService extends Service {
 
     attemptedConnectionCounter.inc();
     network
-        .connect(nodeRecord)
+        .ping(nodeRecord)
         .finish(
             peer -> {
-              LOG.info("Successfully connected to node {}", nodeRecord.getNodeId());
+              LOG.trace("Successfully connected to node {}", nodeRecord.getNodeId());
               successfulConnectionCounter.inc();
               //                    peer.subscribeDisconnect((reason, locallyInitiated) ->
               // peerPools.forgetPeer(peer.getId()));

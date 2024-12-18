@@ -1,10 +1,7 @@
 package samba.services.jsonrpc.methods.discv5;
 
 import samba.jsonrpc.config.RpcMethod;
-import samba.jsonrpc.reponse.JsonRpcMethod;
-import samba.jsonrpc.reponse.JsonRpcRequestContext;
-import samba.jsonrpc.reponse.JsonRpcResponse;
-import samba.jsonrpc.reponse.JsonRpcSuccessResponse;
+import samba.jsonrpc.reponse.*;
 import samba.services.discovery.Discv5Client;
 import samba.services.jsonrpc.methods.results.NodeInfo;
 
@@ -26,7 +23,12 @@ public class Discv5NodeInfo implements JsonRpcMethod {
   @Override
   public JsonRpcResponse response(JsonRpcRequestContext requestContext) {
     NodeRecord nodeRecord = this.discv5Client.getHomeNodeRecord();
-    NodeInfo nodeInfo = new NodeInfo(nodeRecord.asEnr(), nodeRecord.getNodeId().toHexString());
-    return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), nodeInfo);
+    if (nodeRecord != null) {
+      NodeInfo nodeInfo = new NodeInfo(nodeRecord.asEnr(), nodeRecord.getNodeId().toHexString());
+      return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), nodeInfo);
+    } else {
+      return new JsonRpcErrorResponse(
+          requestContext.getRequest().getId(), RpcErrorType.INTERNAL_ERROR);
+    }
   }
 }
