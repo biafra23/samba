@@ -9,6 +9,7 @@ plugins {
   id 'net.ltgt.errorprone' version '4.0.1'
   id 'jacoco'
   id 'jacoco-report-aggregation'
+  id 'maven-publish'
 }
 
 
@@ -16,7 +17,20 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
   throw new GradleException("Java 21 or later is required to build Samba.\n" + "Detected version ${JavaVersion.current()}")
 }
 
-group = 'samba'
+//group = 'samba'
+group = 'com.github.biafra23'
+
+//publishing {
+//  publications {
+//    samba(MavenPublication) {
+//      from components.java
+//      artifactId = 'samba'
+//    }
+//  }
+//  repositories {
+//    mavenLocal()
+//  }
+//}
 
 defaultTasks 'build', 'javadoc'
 
