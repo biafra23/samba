@@ -3,7 +3,7 @@ plugins {
 }
 
 jar {
-  archiveBaseName = 'samba'
+  archiveBaseName = 'core'
   manifest {
     attributes(
       'Specification-Title': archiveBaseName,
