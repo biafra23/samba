@@ -49,7 +49,8 @@ After a successful build, distribution packages are available in `build/distribu
 |--------------|---------------------------------------------------------|
 | distTar      | Full distribution in build/distributions (as `.tar.gz`) |
 | distZip      | Full distribution in build/distributions (as `.zip`)    |
-| distDocker   | The `meldsun_labs/samba` docker image                   |
+| distDocker   | The `meldsun/samba` docker image                        |
+| dockerUpload | Push imges to Docker Hub                                |
 | runContainer | A docker container running                              |
 
 ## Code Style
@@ -79,6 +80,8 @@ To run Hive locally against Samab you should follow these instractions:
 Clone Hive:
 ```shell script
 git clone https://github.com/ethereum/hive
+go build .
+go build ./cmd/hiveview  
 ```
 
 Build a local Docker image from Samba:
@@ -98,12 +101,19 @@ View logs output and results:
 ```shell script
 ./hiveview --serve --logdir ./workspace/logs
 ```
+## JSON-RPC API 
+- portal_historyPing
+- portal_historyFindNodes
+- portal_historyAddEnr
+- portal_historyGetEnr
+- portal_historyDeleteEnr
 
 
+- discv5_nodeInfo, 
+- discv5_updateNodeInfo, 
+- discv5_getEnr
 
-
-
-
+When running against Hive there should be 33 tests passing. 
 
 ## Hardware Requirements
 
@@ -116,9 +126,20 @@ Recommended:
 TO-DO
 
 
-### Useful links:
+### Useful links
 * [Devcon SEA History Expiry and Portal Network session](https://notes.ethereum.org/_XVO7jmXTGOwZmhR5-3T9Q)
 * [EIP-4444 Implementation Plan: History Expiry in Ethereum](https://hackmd.io/Dobc38YVQ1qmbbyI6LcFqA)
 * [Playground](https://playground.open-rpc.org/?schemaUrl=https://raw.githubusercontent.com/ethereum/portal-network-specs/assembled-spec/jsonrpc/openrpc.json)
 * https://eips.ethereum.org/EIPS/eip-7639
 * https://eips.ethereum.org/EIPS/eip-4444
+
+### Donations
+Our work is entirely funded through grants.
+Your contribution will help us to:
+
+* Complete Samba’s full compliance with the Portal History subnetwork.
+* Deploy Samba nodes globally, expanding the Portal network.
+* Drive the ongoing development of additional subnetworks.
+
+
+Here is our Gitcoin Project: [Samba](https://explorer.gitcoin.co/#/projects/0x686ab86d2f92275ae09e2034c56c81b3373a058d868c64c837f8df1540baa001)

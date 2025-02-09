@@ -30,6 +30,8 @@ dependencies {
   implementation libs.besu.internal.config
   implementation libs.besu.internal.plugin.api //TODO need to be removed
   implementation libs.besu.internal.rlp
+  implementation libs.besu.internal.crypto
+  implementation libs.besu.evm
 
   implementation libs.teku.internal.async
   implementation libs.teku.internal.infrastructure.events
@@ -55,6 +57,7 @@ dependencies {
 
   implementation project(':storage-rocksdb')
   implementation project(':server-json-rpc')
+  implementation project(':utp')
   compileOnly libs.projectlombok
   annotationProcessor libs.projectlombok
   testCompileOnly libs.projectlombok

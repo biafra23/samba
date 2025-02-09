@@ -16,6 +16,8 @@ import samba.network.BaseNetwork;
 import samba.network.NetworkType;
 import samba.network.RoutingTable;
 import samba.services.discovery.Discv5Client;
+import samba.services.jsonrpc.methods.results.FindContentResult;
+import samba.services.utp.UTPService;
 import samba.storage.HistoryDB;
 
 import java.util.ArrayList;
@@ -42,14 +44,19 @@ public class HistoryNetwork extends BaseNetwork
   private final HistoryDB historyDB;
   final NodeRecordFactory nodeRecordFactory;
   protected RoutingTable routingTable;
+  private final UTPService utpService;
 
-  public HistoryNetwork(Discv5Client client, HistoryDB historyDB) {
+  public HistoryNetwork(
+      final Discv5Client client, final HistoryDB historyDB, final UTPService utpService) {
     super(NetworkType.EXECUTION_HISTORY_NETWORK, client, UInt256.ONE);
     this.nodeRadius = UInt256.ONE; // TODO must come from argument
     this.routingTable = new HistoryRoutingTable(client.getHomeNodeRecord(), this);
     this.historyDB = historyDB;
+    this.utpService = utpService;
     this.nodeRecordFactory = new NodeRecordFactory(new IdentitySchemaV4Interpreter());
   }
+
+  // TODO check on everymethod if null is received.
 
   @Override
   public SafeFuture<Optional<Pong>> ping(NodeRecord nodeRecord, Ping message) {
@@ -92,69 +99,57 @@ public class HistoryNetwork extends BaseNetwork
         .thenCompose(
             nodesMessage -> {
               Nodes nodes = nodesMessage.getMessage();
-              // SafeFuture.runAsync(() -> {
-              nodes.getEnrList().stream()
-                  .map(nodeRecordFactory::fromEnr)
-                  .filter(this::isNotHomeNode)
-                  .filter(node -> !node.asEnr().equals(nodeRecord.asEnr()))
-                  .filter(this::isPossibleNodeCandidate)
-                  .forEach(
-                      node -> this.ping(node, new Ping(node.getSeq(), this.nodeRadius.toBytes())));
-              //   });
+              SafeFuture.runAsync(
+                  () -> {
+                    nodes.getEnrList().stream()
+                        .map(nodeRecordFactory::fromEnr)
+                        .filter(this::isNotHomeNode)
+                        .filter(node -> !node.asEnr().equals(nodeRecord.asEnr()))
+                        .filter(this::isPossibleNodeCandidate)
+                        .forEach(
+                            node ->
+                                this.ping(
+                                    node, new Ping(node.getSeq(), this.nodeRadius.toBytes())));
+                  });
               return SafeFuture.completedFuture(Optional.of(nodes));
             })
         .exceptionallyCompose(createDefaultErrorWhenSendingMessage(message.getMessageType()));
   }
 
-  // TODO validate what to answer if there is an error. Should we answer with a Content if we know
-  // for example that the is not valid ?
   @Override
-  public SafeFuture<Optional<Content>> findContent(NodeRecord nodeRecord, FindContent message) {
+  public SafeFuture<Optional<FindContentResult>> findContent(
+      NodeRecord nodeRecord, FindContent message) {
     return sendMessage(nodeRecord, message)
+        .orTimeout(3, TimeUnit.SECONDS)
         .thenApply(Optional::get)
         .thenCompose(
             contentMessage -> {
               Content content = contentMessage.getMessage();
-
-              // TODO how we validate NodeRadius ?
-
-              switch (content.getContentType()) {
-                case Content.UTP_CONNECTION_ID -> {
-                  /*
-                  Open a uTP Connection on this port content.getConnectionId()
-                  SafeFuture.runAsync(() -> {
-                  //TODO async UTP opperation once we get the specific content we should call    historyDB.saveContent(
-                  });*/
-                }
+              // TODO: Validate NodeRadius
+              // ContentType contentType = ContentKey.decode(contentKey)
+              return switch (content.getContentType()) {
+                case Content.UTP_CONNECTION_ID ->
+                    this.utpService
+                        .getContent(nodeRecord, content.getConnectionId())
+                        .thenCompose(
+                            data -> {
+                              historyDB.saveContent(message.getContentKey(), content.getContent());
+                              return SafeFuture.completedFuture(
+                                  Optional.of(new FindContentResult(data.toHexString(), true)));
+                            });
                 case Content.CONTENT_TYPE -> {
-                  boolean successfullySaved =
-                      historyDB.saveContent(message.getContentKey(), content.getContent());
-                  if (successfullySaved) {
-                    // gossipNetwork
-                  }
+                  // TODO validate content and key before persisting it or responding.-->
+                  historyDB.saveContent(message.getContentKey(), content.getContent());
+                  yield SafeFuture.completedFuture(
+                      Optional.of(
+                          new FindContentResult(content.getContent().toHexString(), false)));
                 }
-                case Content
-                    .ENRS -> { // ENR records of nodes that are closest to the requested content.
-                  List<String> enrs = content.getEnrList();
-                  if (!enrs.isEmpty()) {
-                    //                    content.getEnrList().stream()
-                    //                        .map(RLPDecoder::decodeRlpEnr)
-                    //                        .filter(
-                    //                            enr ->
-                    //                                !enr.equals(nodeRecord.asEnr())
-                    //                                    ||
-                    // !enr.equals(this.discv5Client.getHomeNodeRecord().asEnr()))
-                    //                        .toList();
-                    // TODO what to do ?
-                  } else {
-                    LOG.info(
-                        "Node: {} does not hold the requested content or knows any eligible node",
-                        nodeRecord.asEnr());
-                  }
-                }
-                default -> throw new IllegalArgumentException("CONTENT: Invalid payload type");
-              }
-              return SafeFuture.completedFuture(Optional.of(content));
+                case Content.ENRS ->
+                    // todo remove us from the list
+                    SafeFuture.completedFuture(
+                        Optional.of(new FindContentResult(content.getEnrList())));
+                default -> SafeFuture.completedFuture(Optional.of(new FindContentResult()));
+              };
             })
         .exceptionallyCompose(createDefaultErrorWhenSendingMessage(message.getMessageType()));
   }
@@ -194,6 +189,22 @@ public class HistoryNetwork extends BaseNetwork
   }
 
   @Override
+  public boolean deleteEnr(String nodeId) {
+    Bytes nodeIdInBytes = Bytes.fromHexString(nodeId);
+    Optional<NodeRecord> nodeRecordToBeRemoved = this.routingTable.findNode(nodeIdInBytes);
+    nodeRecordToBeRemoved.ifPresent(
+        this.routingTable
+            ::removeNode); // TODO refactor inner functions to return the state of the operation.
+    return nodeRecordToBeRemoved.isPresent();
+  }
+
+  @Override
+  public boolean store(String contentKey, String contentValue) {
+    return this.historyDB.saveContent(
+        Bytes.fromHexString(contentKey), Bytes.fromHexString(contentValue));
+  }
+
+  @Override
   public SafeFuture<Optional<Pong>> ping(NodeRecord nodeRecord) {
     Ping ping = new Ping(nodeRecord.getSeq(), this.nodeRadius.toBytes());
     return this.ping(nodeRecord, ping);
@@ -214,6 +225,18 @@ public class HistoryNetwork extends BaseNetwork
     return this.routingTable.getRadius(node.getNodeId());
   }
 
+  public Optional<NodeRecord> findClosestNodeToContentKey(Bytes contentKey) {
+    return this.routingTable.findClosestNodeToContentKey(contentKey);
+  }
+
+  public Optional<NodeRecord> nodeRecordFromEnr(String enr) {
+    try {
+      return Optional.ofNullable(nodeRecordFactory.fromEnr(enr));
+    } catch (Exception e) {
+      return Optional.empty();
+    }
+  }
+
   @Override
   public PortalWireMessage handlePing(NodeRecord srcNode, Ping ping) {
     Bytes srcNodeId = srcNode.getNodeId();
@@ -230,14 +253,14 @@ public class HistoryNetwork extends BaseNetwork
         .forEach(
             distance -> {
               if (distance == 0) {
-                nodesPayload.add(this.getHomeNodeAsEnr());
+                nodesPayload.add(this.getHomeNodeAsBase64());
               } else {
                 // TODO Check max bytes to be sent and decide what to do if not the initialization
                 // of Nodes will fail.
                 this.routingTable
                     .getNodes(distance)
                     .filter(node -> !srcNode.asEnr().equals(node.asEnr()))
-                    .forEach(node -> nodesPayload.add(node.asEnr()));
+                    .forEach(node -> nodesPayload.add(node.asBase64()));
               }
             });
     return new Nodes(nodesPayload);
@@ -248,17 +271,18 @@ public class HistoryNetwork extends BaseNetwork
     Bytes contentKey = findContent.getContentKey();
     ContentType contentType = ContentType.fromContentKey(contentKey);
     Bytes value = contentKey.slice(0, 1);
-    Optional<byte[]> content = historyDB.get(contentType, value);
+    Optional<Bytes> content = historyDB.get(contentType, value);
+
     if (content.isEmpty()) {
       // TODO return list of ENRs that we know of that are closest to the requested content
       /*If the node does not hold the requested content, and the node does not know of any nodes with eligible ENR values, then the node MUST return enrs as an empty list.*/
       return new Content(List.of());
     }
-    if (content.get().length > PortalWireMessage.MAX_CUSTOM_PAYLOAD_BYTES) {
+    if (content.get().size() > PortalWireMessage.MAX_CUSTOM_PAYLOAD_BYTES) {
       // TODO initiate UTP connection and UTP async listen on connectionId
       return new Content(0);
     }
-    return new Content(Bytes.of(content.get()));
+    return new Content(content.get());
   }
 
   @Override
@@ -294,8 +318,8 @@ public class HistoryNetwork extends BaseNetwork
         .thenCompose((__) -> new CompletableFuture<>());
   }
 
-  private String getHomeNodeAsEnr() {
-    return this.discv5Client.getHomeNodeRecord().asEnr();
+  private String getHomeNodeAsBase64() {
+    return this.discv5Client.getHomeNodeRecord().asBase64();
   }
 
   private boolean isPossibleNodeCandidate(NodeRecord node) {
@@ -315,5 +339,10 @@ public class HistoryNetwork extends BaseNetwork
       LOG.info("Something when wrong when sending a {}", message);
       return SafeFuture.completedFuture(Optional.empty());
     };
+  }
+
+  // TODO THIS MUST BE REFACTORED.
+  public Optional<Bytes> getContent(ContentType contentType, Bytes contentKeyBytes) {
+    return this.historyDB.get(contentType, contentKeyBytes);
   }
 }
