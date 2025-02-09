@@ -197,7 +197,7 @@ subprojects {
 jar {
   archiveBaseName.set('samba')
   archiveVersion.set(version)
-  destinationDirectory.set(file("$buildDir/libs"))
+  destinationDirectory.set(file("$buildDir/build/libs"))
 }
 
 apply plugin: 'application'
@@ -217,7 +217,7 @@ applicationDefaultJvmArgs = [
   "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens",
   "java.base/java.nio=ALL-UNNAMED",
-  //"-Dlog4j.configurationFile=core/src/main/resources/log4j2.xml"
+  "-Dlog4j.configurationFile=core/src/main/resources/log4j2.xml"
 ]
 
 run {
@@ -424,13 +424,19 @@ def calculateVersion() {
   if (project.hasProperty('version') && (project.version =~ calVerPattern)) {
     if (project.hasProperty('versionappendcommit') && project.versionappendcommit == "true") {
       def gitDetails = getGitCommitDetails(7) // Adjust length as needed
+      println "-> Version: ${project.version}-${gitDetails.hash}"
       return "${project.version}-${gitDetails.hash}"
     }
+    println "-> Version: ${project.version}"
+
     return "${project.version}"
   } else {
     // If no version is supplied or it doesn't match the semantic versioning, calculate from git
     println("Generating project version as supplied is version not semver: ${project.version}")
     def gitDetails = getGitCommitDetails(7) // Adjust length as needed
+
+    println "-> Version: ${gitDetails.date}-develop-${gitDetails.hash}"
+
     return "${gitDetails.date}-develop-${gitDetails.hash}"
   }
 }
