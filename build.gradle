@@ -33,6 +33,17 @@ version = '1.0.0'
 //  }
 //}
 
+//// Prevent buildSrc from being published
+//publishing {
+//  publications {
+//    mavenJava(MavenPublication) {
+//      from components.java
+//      // Exclude buildSrc from being published
+//      artifactId = 'exclude-buildSrc'
+//    }
+//  }
+//}
+
 defaultTasks 'build', 'javadoc'
 
 apply from: 'buildscripts/buildAliases.gradle'
@@ -158,6 +169,11 @@ dependencies {
 }
 
 subprojects {
+  if (project.name == 'buildSrc') {
+    tasks.withType(PublishToMavenRepository) {
+      enabled = false
+    }
+  }
 
   tasks.withType(JavaCompile) {
     options.fork = true
