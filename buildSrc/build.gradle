@@ -5,3 +5,5 @@ plugins {
 //tasks.withType(Jar) {
 //    enabled = false
 //}
+
+version = "1.0.0"
