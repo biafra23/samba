@@ -19,6 +19,7 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
 
 //group = 'samba'
 group = 'com.github.biafra23'
+version = '1.0.0'
 
 //publishing {
 //  publications {
@@ -175,7 +176,13 @@ subprojects {
   }
 }
 
-jar { enabled = false }
+//jar { enabled = false }
+
+jar {
+  archiveBaseName.set('samba')
+  archiveVersion.set(version)
+  destinationDirectory.set(file("$buildDir/libs"))
+}
 
 apply plugin: 'application'
 mainClassName = 'samba.Samba'
