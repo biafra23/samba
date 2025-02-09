@@ -9,8 +9,7 @@ plugins {
   id 'net.ltgt.errorprone' version '4.0.1'
   id 'jacoco'
   id 'jacoco-report-aggregation'
-  id 'java'
-  id 'maven-publish'
+
 }
 
 
@@ -21,18 +20,6 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
 //group = 'samba'
 group = 'com.github.biafra23'
 version = '1.0.0'
-
-publishing {
-  publications {
-    samba(MavenPublication) {
-      from components.java
-      artifactId = project.name
-    }
-  }
-  repositories {
-    mavenLocal()
-  }
-}
 
 defaultTasks 'build', 'javadoc'
 

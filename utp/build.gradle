@@ -1,5 +1,7 @@
 plugins {
   id 'samba.java-library-conventions'
+  id 'java'
+  id 'maven-publish'
 }
 
 group = 'samba.utp'
@@ -22,4 +24,16 @@ dependencies {
   testImplementation libs.junit.jupiter.api
   testImplementation libs.assertj.core
   testRuntimeOnly libs.junit.jupiter.engine
+}
+
+publishing {
+  publications {
+    samba(MavenPublication) {
+      from components.java
+      artifactId = project.name
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
 }
