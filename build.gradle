@@ -22,28 +22,17 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
 group = 'com.github.biafra23'
 version = '1.0.0'
 
-//publishing {
-//  publications {
-//    samba(MavenPublication) {
-//      from components.java
-//      artifactId = 'samba'
-//    }
-//  }
-//  repositories {
-//    mavenLocal()
-//  }
-//}
-
-//// Prevent buildSrc from being published
-//publishing {
-//  publications {
-//    mavenJava(MavenPublication) {
-//      from components.java
-//      // Exclude buildSrc from being published
-//      artifactId = 'exclude-buildSrc'
-//    }
-//  }
-//}
+publishing {
+  publications {
+    samba(MavenPublication) {
+      from components.java
+      artifactId = project.name
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
+}
 
 defaultTasks 'build', 'javadoc'
 
