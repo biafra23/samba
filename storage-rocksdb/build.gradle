@@ -4,8 +4,8 @@ plugins {
   id 'maven-publish'
 }
 
-group = "com.github.biafra23.samba.${project.name}"
-version = '1.0.0'
+//group = "com.github.biafra23.samba.${project.name}"
+//version = '1.0.0'
 
 dependencies {
   implementation libs.apache.logging.log4j.api
