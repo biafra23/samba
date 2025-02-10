@@ -3,8 +3,6 @@ plugins {
     id 'maven-publish'
 }
 
-group = "com.github.biafra23.samba.${project.name}"
-
 publishing {
     publications {
         samba(MavenPublication) {

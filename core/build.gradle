@@ -5,7 +5,7 @@ plugins {
 
 }
 
-group = "com.github.biafra23.samba.${project.name}"
+//group = "com.github.biafra23.samba"
 
 jar {
   archiveBaseName = 'core'
