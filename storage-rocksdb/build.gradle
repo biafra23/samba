@@ -4,7 +4,7 @@ plugins {
   id 'maven-publish'
 }
 
-group = 'com.github.biafra23.samba.storage-rocksdb'
+group = "com.github.biafra23.samba.${project.name}"
 version = '1.0.0'
 
 dependencies {

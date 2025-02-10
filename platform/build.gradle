@@ -3,7 +3,21 @@ plugins {
   id 'com.diffplug.spotless'
   id 'maven-publish'
 }
-group = 'com.github.biafra23.samba.platform'
+group = "com.github.biafra23.samba"
+//group = "com.github.biafra23.samba.${project.name}"
+
+publishing {
+  publications {
+    samba(MavenPublication) {
+      from components.javaPlatform
+      artifactId = project.name
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
+}
+
 
 javaPlatform {
   allowDependencies()
@@ -51,14 +65,3 @@ spotless {
   }
 }
 
-publishing {
-  publications {
-    samba(MavenPublication) {
-      from components.javaPlatform
-      artifactId = project.name
-    }
-  }
-  repositories {
-    mavenLocal()
-  }
-}

@@ -1,8 +1,10 @@
 plugins {
   id 'samba.java-library-conventions'
+  id 'java'
+  id 'maven-publish'
 }
 
-group = 'com.github.biafra23.samba.server-json-rpc'
+group = "com.github.biafra23.samba.${project.name}"
 version = '1.0.0'
 
 dependencies {
@@ -14,4 +16,16 @@ dependencies {
   implementation libs.google.guava
   implementation libs.jackson.dataformat.yaml
   implementation libs.jackson.datatype.jdk8
+}
+
+publishing {
+  publications {
+    samba(MavenPublication) {
+      from components.java
+      artifactId = project.name
+    }
+  }
+  repositories {
+    mavenLocal()
+  }
 }
