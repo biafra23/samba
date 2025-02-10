@@ -18,7 +18,8 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
 }
 
 //group = 'samba'
-group = 'com.github.biafra23'
+//group = 'com.github.biafra23'
+group = "com.github.biafra23.samba.${project.name}"
 version = '1.0.0'
 
 defaultTasks 'build', 'javadoc'

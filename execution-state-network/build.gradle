@@ -1,1 +1,18 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
 
+group = "com.github.biafra23.samba.${project.name}"
+
+publishing {
+    publications {
+        samba(MavenPublication) {
+            from components.java
+            artifactId = project.name
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
