@@ -2,7 +2,10 @@ plugins {
   id 'samba.java-library-conventions'
   id 'java'
   id 'maven-publish'
+
 }
+
+group = 'com.github.biafra23.samba.core'
 
 jar {
   archiveBaseName = 'core'

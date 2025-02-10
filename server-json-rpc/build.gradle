@@ -2,7 +2,7 @@ plugins {
   id 'samba.java-library-conventions'
 }
 
-group = 'samba.server-json-rpc'
+group = 'com.github.biafra23.samba.server-json-rpc'
 version = '1.0.0'
 
 dependencies {

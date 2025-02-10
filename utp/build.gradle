@@ -4,7 +4,7 @@ plugins {
   id 'maven-publish'
 }
 
-group = 'samba.utp'
+group = 'com.github.biafra23.samba.utp'
 version = '0.0.1-SNAPSHOT'
 
 dependencies {
