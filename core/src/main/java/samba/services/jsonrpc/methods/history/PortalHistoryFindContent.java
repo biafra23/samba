@@ -14,7 +14,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 
 public class PortalHistoryFindContent implements JsonRpcMethod {
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(PortalHistoryFindContent.class);
   private HistoryJsonRpcRequests historyJsonRpcRequests;
 
   public PortalHistoryFindContent(HistoryJsonRpcRequests historyJsonRpcRequests) {

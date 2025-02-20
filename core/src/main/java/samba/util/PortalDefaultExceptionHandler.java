@@ -10,7 +10,7 @@ import tech.pegasys.teku.infrastructure.events.ChannelExceptionHandler;
 
 public final class PortalDefaultExceptionHandler
     implements ChannelExceptionHandler, UncaughtExceptionHandler {
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(PortalDefaultExceptionHandler.class);
 
   public PortalDefaultExceptionHandler() {}
 

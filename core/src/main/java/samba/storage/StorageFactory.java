@@ -12,7 +12,7 @@ import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 public class StorageFactory {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(StorageFactory.class);
 
   static final String DB_PATH = "db";
   static final String DB_VERSION_PATH = "db.version"; // TODO have version file

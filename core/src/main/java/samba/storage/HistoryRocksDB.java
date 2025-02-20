@@ -20,7 +20,7 @@ import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 
 public class HistoryRocksDB implements HistoryDB {
 
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(HistoryRocksDB.class);
   private final RocksDBInstance rocksDBInstance;
 
   public HistoryRocksDB(

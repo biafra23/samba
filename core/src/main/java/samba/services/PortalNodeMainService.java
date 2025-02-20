@@ -47,7 +47,7 @@ import tech.pegasys.teku.service.serviceutils.Service;
 
 public class PortalNodeMainService extends Service {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(PortalNodeMainService.class);
   private static final int DEFAULT_ASYNC_P2P_MAX_THREADS = 10;
   public static final int DEFAULT_ASYNC_P2P_MAX_QUEUE = DEFAULT_MAX_QUEUE_SIZE;
 

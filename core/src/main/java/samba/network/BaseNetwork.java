@@ -19,7 +19,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public abstract class BaseNetwork implements Network {
 
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(BaseNetwork.class);
   protected NetworkType networkType;
   protected Discv5Client discv5Client;
   protected UInt256 nodeRadius;

@@ -136,10 +136,10 @@ public class SambaCommand implements Callable<Integer> {
         ExceptionUtil.<Throwable>getCause(e, InvalidConfigurationException.class)
             .or(() -> ExceptionUtil.getCause(e, DatabaseStorageException.class));
     if (maybeUserErrorException.isPresent()) {
-      LogManager.getLogger().fatal(e.getMessage(), e);
+      LogManager.getLogger(SambaCommand.class).fatal(e.getMessage(), e);
       return 2;
     } else {
-      LogManager.getLogger().fatal("Samba failed to start", e);
+      LogManager.getLogger(SambaCommand.class).fatal("Samba failed to start", e);
       return 1;
     }
   }

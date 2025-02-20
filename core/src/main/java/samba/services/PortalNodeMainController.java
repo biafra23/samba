@@ -28,7 +28,7 @@ import tech.pegasys.teku.service.serviceutils.ServiceFacade;
 
 public class PortalNodeMainController extends Service {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(PortalNodeMainController.class);
   protected final List<Service> services = new ArrayList<>();
 
   public PortalNodeMainController(

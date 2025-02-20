@@ -8,7 +8,7 @@ import tech.pegasys.teku.infrastructure.io.PortAvailability;
 
 public class PortalRestApiConfig {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(PortalRestApiConfig.class);
 
   public static final int DEFAULT_REST_API_PORT = 5051;
   public static final String DEFAULT_REST_API_INTERFACE = "0.0.0.0";

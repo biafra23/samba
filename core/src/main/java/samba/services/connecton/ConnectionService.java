@@ -21,7 +21,7 @@ import tech.pegasys.teku.service.serviceutils.Service;
 
 public class ConnectionService extends Service {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(ConnectionService.class);
   protected static final Duration WARMUP_DISCOVERY_INTERVAL = Duration.ofSeconds(1);
   protected static final Duration DISCOVERY_INTERVAL = Duration.ofSeconds(30);
 

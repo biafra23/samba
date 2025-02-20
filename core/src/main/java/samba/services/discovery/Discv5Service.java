@@ -34,7 +34,7 @@ import tech.pegasys.teku.service.serviceutils.Service;
 
 public class Discv5Service extends Service implements Discv5Client {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(Discv5Service.class);
   private final DiscoverySystem discoverySystem;
   private final AsyncRunner asyncRunner;
   private volatile Cancellable bootnodeRefreshTask;

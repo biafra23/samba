@@ -18,7 +18,7 @@ import tech.pegasys.teku.infrastructure.io.IPVersionResolver;
 import tech.pegasys.teku.infrastructure.io.PortAvailability;
 
 public class DiscoveryConfig {
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(DiscoveryConfig.class);
 
   public static final int DEFAULT_UDP_PORT_IPV4 = 9000;
   public static final int DEFAULT_UDP_PORT_IPV6 = 9090;

@@ -27,7 +27,7 @@ import tech.pegasys.teku.infrastructure.restapi.endpoints.RestApiRequest;
 
 public class GetHealth extends RestApiEndpoint {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(GetHealth.class);
   public static final String ROUTE = "/health";
 
   public GetHealth() {

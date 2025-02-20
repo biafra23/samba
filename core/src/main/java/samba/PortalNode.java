@@ -30,7 +30,7 @@ import tech.pegasys.teku.infrastructure.events.EventChannels;
 
 public class PortalNode implements Node {
 
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(PortalNode.class);
 
   private final Vertx vertx = Vertx.vertx();
   private final ExecutorService threadPool =

@@ -15,7 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 
 public class PortalHistoryFindNodes implements JsonRpcMethod {
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(PortalHistoryFindNodes.class);
   private HistoryJsonRpcRequests historyJsonRpcRequests;
 
   public PortalHistoryFindNodes(HistoryJsonRpcRequests historyJsonRpcRequests) {

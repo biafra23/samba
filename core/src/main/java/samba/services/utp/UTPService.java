@@ -18,7 +18,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.service.serviceutils.Service;
 
 public class UTPService extends Service implements TransportLayer<UTPAddress> {
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(UTPService.class);
 
   //    // IP address + port + Discovery v5 NodeId + connection_id
   private Map<Integer, UTPClient> connections;
