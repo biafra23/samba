@@ -36,7 +36,7 @@ import tech.pegasys.teku.infrastructure.events.ChannelExceptionHandler;
 
 public final class SambaDefaultExceptionHandler
     implements ChannelExceptionHandler, UncaughtExceptionHandler {
-  private static final Logger LOG = LogManager.getLogger();
+  private static final Logger LOG = LogManager.getLogger(SambaDefaultExceptionHandler.class);
 
   private final StatusLogger statusLog;
 
