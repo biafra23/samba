@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -136,10 +135,10 @@ public class SambaCommand implements Callable<Integer> {
         ExceptionUtil.<Throwable>getCause(e, InvalidConfigurationException.class)
             .or(() -> ExceptionUtil.getCause(e, DatabaseStorageException.class));
     if (maybeUserErrorException.isPresent()) {
-      LogManager.getLogger(SambaCommand.class).fatal(e.getMessage(), e);
+      logger.error(e.getMessage(), e);
       return 2;
     } else {
-      LogManager.getLogger(SambaCommand.class).fatal("Samba failed to start", e);
+      logger.error("Samba failed to start", e);
       return 1;
     }
   }

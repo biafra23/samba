@@ -2,13 +2,13 @@ package samba.config;
 
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.pegasys.teku.infrastructure.io.PortAvailability;
 
 public class PortalRestApiConfig {
 
-  private static final Logger LOG = LogManager.getLogger(PortalRestApiConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PortalRestApiConfig.class);
 
   public static final int DEFAULT_REST_API_PORT = 5051;
   public static final String DEFAULT_REST_API_INTERFACE = "0.0.0.0";

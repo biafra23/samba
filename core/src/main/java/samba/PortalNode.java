@@ -3,6 +3,8 @@ package samba;
 import static samba.logging.StatusLogger.STATUS_LOG;
 import static tech.pegasys.teku.infrastructure.time.SystemTimeProvider.SYSTEM_TIME_PROVIDER;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import samba.config.PortalRestApiConfig;
 import samba.config.SambaConfiguration;
 import samba.config.StartupLogConfig;
@@ -19,8 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import oshi.SystemInfo;
 import tech.pegasys.teku.infrastructure.async.AsyncRunnerFactory;
 import tech.pegasys.teku.infrastructure.async.Cancellable;
@@ -30,7 +30,7 @@ import tech.pegasys.teku.infrastructure.events.EventChannels;
 
 public class PortalNode implements Node {
 
-  private static final Logger LOG = LogManager.getLogger(PortalNode.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PortalNode.class);
 
   private final Vertx vertx = Vertx.vertx();
   private final ExecutorService threadPool =

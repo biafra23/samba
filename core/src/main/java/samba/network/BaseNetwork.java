@@ -10,16 +10,16 @@ import samba.services.discovery.Discv5Client;
 import java.util.Optional;
 
 import com.google.common.base.Throwables;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class BaseNetwork implements Network {
 
-  protected static final Logger LOG = LogManager.getLogger(BaseNetwork.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(BaseNetwork.class);
   protected NetworkType networkType;
   protected Discv5Client discv5Client;
   protected UInt256 nodeRadius;

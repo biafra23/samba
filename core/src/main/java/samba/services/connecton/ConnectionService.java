@@ -1,5 +1,7 @@
 package samba.services.connecton;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import samba.metrics.SambaMetricCategory;
 import samba.network.Network;
 import samba.services.discovery.Discv5Client;
@@ -8,8 +10,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
@@ -21,7 +21,7 @@ import tech.pegasys.teku.service.serviceutils.Service;
 
 public class ConnectionService extends Service {
 
-  private static final Logger LOG = LogManager.getLogger(ConnectionService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionService.class);
   protected static final Duration WARMUP_DISCOVERY_INTERVAL = Duration.ofSeconds(1);
   protected static final Duration DISCOVERY_INTERVAL = Duration.ofSeconds(30);
 
@@ -107,7 +107,7 @@ public class ConnectionService extends Service {
               // peerPools.forgetPeer(peer.getId()));
             },
             error -> {
-              LOG.trace(() -> "Failed to connect to node: " + nodeRecord.getNodeId());
+              LOG.trace("Failed to connect to node: {}", nodeRecord.getNodeId());
               failedConnectionCounter.inc();
               //                    peerPools.forgetPeer(peerAddress.getId());
             });
