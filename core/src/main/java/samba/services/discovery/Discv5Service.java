@@ -66,7 +66,7 @@ public class Discv5Service extends Service implements Discv5Client {
         "The configured network interfaces must be either 1 or 2");
 
     if (networkInterfaces.size() == 1) {
-      final String listenAddress = networkInterfaces.getFirst();
+      final String listenAddress = networkInterfaces.get(0);
       discoverySystemBuilder.listen(listenAddress, discoveryConfig.getListenUDPPortIpv4());
       this.supportsIpv6 =
           IPVersionResolver.resolve(listenAddress) == IPVersionResolver.IPVersion.IP_V6;
