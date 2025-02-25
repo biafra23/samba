@@ -22,7 +22,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 @SuppressWarnings("SameNameButDifferent")
 public class UTPManager implements TransportLayer<UTPAddress> {
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(UTPManager.class);
 
   private final Map<String, UTPClient> connections;
   private final Discv5Client discv5Client;
