@@ -4,10 +4,9 @@ import samba.config.PortalRestApiConfig;
 import samba.config.VersionProvider;
 import samba.services.api.endpoints.health.GetHealth;
 
-import javax.naming.ServiceUnavailableException;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
+import samba.services.exceptions.ServiceUnavailableException;
 import tech.pegasys.teku.infrastructure.async.AsyncRunner;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.infrastructure.events.EventChannels;
