@@ -172,7 +172,7 @@ public class PortalNodeMainService extends Service {
     this.historyNetwork =
         new HistoryNetwork(
             this.discoveryService,
-            HistoryRocksDB.create(metricsSystem, Paths.get("samba/db")),
+            HistoryRocksDB.create(metricsSystem, Paths.get("/data/user/0/com.jaeckel.androidportal/files/samba/db")),
             this.utpManager);
   }
 
