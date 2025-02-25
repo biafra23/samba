@@ -140,7 +140,7 @@ public abstract class RocksDBStorage implements KeyValueStorage {
     final var options =
         new ColumnFamilyOptions()
             .setTtl(0)
-            .setCompressionType(CompressionType.NO_COMPRESSION)
+            .setCompressionType(CompressionType.ZLIB_COMPRESSION)
             .setTableFormatConfig(basedTableConfig);
 
     if (segment.containsStaticData()) {
@@ -148,7 +148,7 @@ public abstract class RocksDBStorage implements KeyValueStorage {
           .setEnableBlobFiles(true)
           .setEnableBlobGarbageCollection(segment.isStaticDataGarbageCollectionEnabled())
           .setMinBlobSize(100)
-          .setBlobCompressionType(CompressionType.NO_COMPRESSION);
+          .setBlobCompressionType(CompressionType.ZLIB_COMPRESSION);
     }
 
     return new ColumnFamilyDescriptor(segment.getId(), options);
