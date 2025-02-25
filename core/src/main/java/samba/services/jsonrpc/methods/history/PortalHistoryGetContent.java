@@ -17,12 +17,14 @@ import samba.services.jsonrpc.methods.results.GetContentResult;
 
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public class PortalHistoryGetContent implements JsonRpcMethod {
-
+  protected static final Logger LOG = LogManager.getLogger();
   private final HistoryNetwork historyNetwork;
 
   public PortalHistoryGetContent(final HistoryNetwork historyNetwork) {
@@ -34,33 +36,27 @@ public class PortalHistoryGetContent implements JsonRpcMethod {
     return RpcMethod.PORTAL_HISTORY_GET_CONTENT.getMethodName();
   }
 
+  // TODO WIP
   @Override
   public JsonRpcResponse response(JsonRpcRequestContext requestContext) {
-    Bytes contentKeyBytes;
     try {
-      contentKeyBytes = requestContext.getRequiredParameter(0, Bytes.class);
-    } catch (JsonRpcParameter.JsonRpcParameterException e) {
-      return createJsonRpcInvalidRequestResponse(requestContext);
-    }
-    if (contentKeyBytes.size() == 0) {
-      return createJsonRpcInvalidRequestResponse(requestContext);
-    }
-    try {
-      ContentKey contentKey = ContentUtil.createContentKeyFromSszBytes(contentKeyBytes).get();
-      Optional<Bytes> content =
-          this.historyNetwork.getContent(contentKey.getContentType(), contentKeyBytes);
+      Optional<Bytes> contentKeyBytes = getContentKeyFromParameter(requestContext);
+      if (contentKeyBytes.isEmpty()) return createJsonRpcInvalidRequestResponse(requestContext);
+      ContentKey contentKey = ContentUtil.createContentKeyFromSszBytes(contentKeyBytes.get()).get();
+
+      Optional<Bytes> content = this.historyNetwork.getContent(contentKey);
+
       Boolean utpTransfer = false;
       if (content.isEmpty()) {
         Optional<NodeRecord> nodeRecord =
-            historyNetwork.findClosestNodeToContentKey(contentKeyBytes);
-        if (nodeRecord.isEmpty()) {
-          return createJsonRpcInvalidRequestResponse(requestContext);
-        }
+            historyNetwork.findClosestNodeToContentKey(contentKeyBytes.get());
+        if (nodeRecord.isEmpty()) return createJsonRpcInvalidRequestResponse(requestContext);
+
         FindContentResult findContentResult =
             SafeFuture.supplyAsync(
                     () ->
                         historyNetwork
-                            .findContent(nodeRecord.get(), new FindContent(contentKeyBytes))
+                            .findContent(nodeRecord.get(), new FindContent(contentKeyBytes.get()))
                             .join()
                             .orElseThrow(() -> new RuntimeException("Failed to find content")))
                 .join();
@@ -73,7 +69,7 @@ public class PortalHistoryGetContent implements JsonRpcMethod {
                   SafeFuture.supplyAsync(
                           () ->
                               historyNetwork
-                                  .findContent(node.get(), new FindContent(contentKeyBytes))
+                                  .findContent(node.get(), new FindContent(contentKeyBytes.get()))
                                   .join()
                                   .orElseThrow(
                                       () -> new RuntimeException("Failed to find content")))
@@ -83,21 +79,37 @@ public class PortalHistoryGetContent implements JsonRpcMethod {
                 utpTransfer = searchedNodeResult.getUtpTransfer();
                 return new JsonRpcSuccessResponse(
                     requestContext.getRequest().getId(),
-                    new GetContentResult(content.get(), utpTransfer));
+                    new GetContentResult(content.get().toHexString(), utpTransfer));
               }
             }
           }
+
           return new JsonRpcErrorResponse(
               requestContext.getRequest().getId(), RpcErrorType.CONTENT_NOT_FOUND_ERROR);
         } else {
+
           content = Optional.of(Bytes.fromHexString(findContentResult.getContent()));
           utpTransfer = findContentResult.getUtpTransfer();
         }
       }
       return new JsonRpcSuccessResponse(
-          requestContext.getRequest().getId(), new GetContentResult(content.get(), utpTransfer));
+          requestContext.getRequest().getId(),
+          new GetContentResult(content.get().toHexString(), utpTransfer));
     } catch (Exception e) {
       return createJsonRpcInvalidRequestResponse(requestContext);
+    }
+  }
+
+  private Optional<Bytes> getContentKeyFromParameter(JsonRpcRequestContext requestContext) {
+    try {
+      String contentKeyHex = requestContext.getRequiredParameter(0, String.class);
+      if (contentKeyHex == null || contentKeyHex.isEmpty()) {
+        return Optional.empty();
+      }
+      Bytes contentKeyBytes = Bytes.fromHexString(contentKeyHex);
+      return contentKeyBytes.isEmpty() ? Optional.empty() : Optional.of(contentKeyBytes);
+    } catch (JsonRpcParameter.JsonRpcParameterException e) {
+      return Optional.empty();
     }
   }
 }

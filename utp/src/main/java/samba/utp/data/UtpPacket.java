@@ -173,6 +173,10 @@ public class UtpPacket {
     return joinByteArray(header, getPayload());
   }
 
+  public Bytes toBytes() {
+    return Bytes.of(this.toByteArray());
+  }
+
   private byte[] getExtensionlessByteArray() {
     byte[] byteArray =
         new byte[] {
@@ -346,6 +350,8 @@ public class UtpPacket {
                 + "] "
                 + "[Payload: "
                 + (payloadHex)
+                + "[Size:"
+                + getPacketLength()
                 + "] ");
 
     if (extensions != null) {

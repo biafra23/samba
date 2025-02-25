@@ -12,7 +12,7 @@ import samba.domain.messages.requests.FindContent;
 import samba.domain.messages.response.Content;
 import samba.services.discovery.Discv5Client;
 import samba.services.jsonrpc.methods.results.FindContentResult;
-import samba.services.utp.UTPService;
+import samba.services.utp.UTPManager;
 import samba.storage.HistoryDB;
 
 import java.util.List;
@@ -33,7 +33,7 @@ public class FindContentMessageTests {
   private static final int connectionId = 1;
   private HistoryDB historyDB;
   private Discv5Client discv5Client;
-  private UTPService utpService;
+  private UTPManager utpManager;
   private NodeRecord nodeRecord;
   private HistoryNetwork historyNetwork;
 
@@ -41,15 +41,15 @@ public class FindContentMessageTests {
   public void setUp() {
     this.historyDB = mock(HistoryDB.class);
     this.discv5Client = mock(Discv5Client.class);
-    this.utpService = mock(UTPService.class);
+    this.utpManager = mock(UTPManager.class);
     this.nodeRecord = createNodeRecord();
-    this.historyNetwork = new HistoryNetwork(discv5Client, historyDB, utpService);
+    this.historyNetwork = new HistoryNetwork(discv5Client, historyDB, utpManager);
   }
 
   @Test
   public void sendOkFindContentMessageAndRecieveOkContentConnectionIdTest()
       throws ExecutionException, InterruptedException {
-    when(utpService.getContent(any(NodeRecord.class), eq(connectionId)))
+    when(utpManager.findContentRead(any(NodeRecord.class), eq(connectionId)))
         .thenReturn(SafeFuture.completedFuture(Bytes.EMPTY));
     when(discv5Client.sendDisv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
         .thenReturn(createContentConnectionIdBytesResponse(connectionId));
@@ -80,6 +80,8 @@ public class FindContentMessageTests {
       throws ExecutionException, InterruptedException {
     when(discv5Client.sendDisv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
         .thenReturn(createContentEnrBytesResponse(List.of("-LI=", "-LI=", "-LI=")));
+    when(discv5Client.getEnr()).thenReturn(Optional.of("enr"));
+
     Optional<FindContentResult> content =
         historyNetwork.findContent(nodeRecord, createFindContentMessage(contentKey)).get();
 
@@ -105,7 +107,7 @@ public class FindContentMessageTests {
         .thenReturn(createBadContentBytesResponse(Bytes.fromHexString("0x0501")));
     Optional<FindContentResult> content =
         historyNetwork.findContent(nodeRecord, createFindContentMessage(contentKey)).get();
-    assertEquals(Optional.empty(), content);
+    assertEquals("0x", content.get().getContent());
   }
 
   @Test

@@ -40,19 +40,28 @@ public class Session {
       this.connectionIdReceiving = connectionIdReceiving;
       this.connectionIdSending = connectionIdReceiving + 1;
       this.sequenceNumber = DEF_SEQ_START;
+
     } finally {
       lock.unlock();
     }
   }
 
-  public void initServerConnection(
-      TransportAddress remoteAddress, short connectionId, short sequenceNumber) {
+  public void initServerConnection(TransportAddress remoteAddress, final long connectionId) {
     lock.lock();
     try {
       this.remoteAddress = remoteAddress;
-      this.connectionIdSending = (connectionId & MASK);
       this.connectionIdReceiving = (connectionId & MASK) + 1;
-      this.sequenceNumber = Utils.randomSeqNumber();
+      this.connectionIdSending = (connectionId & MASK);
+      this.sequenceNumber = DEF_SEQ_START;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public void updateStateOnConnectionInitSuccess(short sequenceNumber) {
+    lock.lock();
+    try {
+      this.state = CONNECTED;
       this.ackNumber = sequenceNumber & MASK;
     } finally {
       lock.unlock();
@@ -72,7 +81,7 @@ public class Session {
   public void printState() {
     String state =
         String.format(
-            "[ConnID Sending: %d] [ConnID Recv: %d] [SeqNr. %d] [AckNr: %d] [State: %s]",
+            "Session [ConnID Sending: %d] [ConnID Recv: %d] [SeqNr: %d] [AckNr: %d] [State: %s]",
             connectionIdSending,
             connectionIdReceiving,
             sequenceNumber,
@@ -108,6 +117,16 @@ public class Session {
     lock.lock();
     try {
       this.state = CLOSED;
+      this.sequenceNumber = DEF_SEQ_START;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public void forceClose() {
+    lock.lock();
+    try {
+      this.state = SYN_ACKING_FAILED;
       this.sequenceNumber = DEF_SEQ_START;
     } finally {
       lock.unlock();
