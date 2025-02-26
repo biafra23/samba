@@ -24,7 +24,7 @@ import org.ethereum.beacon.discovery.schema.NodeRecord;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public class PortalHistoryGetContent implements JsonRpcMethod {
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(PortalHistoryGetContent.class);
   private final HistoryNetwork historyNetwork;
 
   public PortalHistoryGetContent(final HistoryNetwork historyNetwork) {

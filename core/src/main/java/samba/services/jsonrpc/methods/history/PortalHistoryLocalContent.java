@@ -13,7 +13,7 @@ import org.apache.tuweni.bytes.Bytes;
 
 public class PortalHistoryLocalContent implements JsonRpcMethod {
 
-  protected static final Logger LOG = LogManager.getLogger();
+  protected static final Logger LOG = LogManager.getLogger(PortalHistoryLocalContent.class);
 
   private final HistoryJsonRpcRequests historyJsonRpcRequests;
 
