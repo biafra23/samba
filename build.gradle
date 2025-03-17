@@ -9,7 +9,6 @@ plugins {
   id 'net.ltgt.errorprone' version '4.0.1'
   id 'jacoco'
   id 'jacoco-report-aggregation'
-
 }
 
 
