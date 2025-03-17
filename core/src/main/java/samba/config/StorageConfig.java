@@ -53,19 +53,19 @@ public class StorageConfig {
             new CommandLine(command), "Unable to create default data directory.");
       }
     }
-    try {
-      Files.createDirectories(sambaHome);
-    } catch (final FileAlreadyExistsException e) {
-      throw new CommandLine.ParameterException(
-          new CommandLine(command),
-          String.format("%s: already exists and is not a directory.", sambaHome.toAbsolutePath()),
-          e);
-    } catch (final Exception e) {
-      throw new CommandLine.ParameterException(
-          new CommandLine(command),
-          String.format("Error creating directory %s.", sambaHome.toAbsolutePath()),
-          e);
-    }
+//    try {
+//      Files.createDirectories(sambaHome);
+//    } catch (final FileAlreadyExistsException e) {
+//      throw new CommandLine.ParameterException(
+//          new CommandLine(command),
+//          String.format("%s: already exists and is not a directory.", sambaHome.toAbsolutePath()),
+//          e);
+//    } catch (final Exception e) {
+//      throw new CommandLine.ParameterException(
+//          new CommandLine(command),
+//          String.format("Error creating directory %s.", sambaHome.toAbsolutePath()),
+//          e);
+//    }
     return sambaHome;
   }
 
