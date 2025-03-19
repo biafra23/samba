@@ -1,7 +1,5 @@
 package samba.services.connecton;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import samba.metrics.SambaMetricCategory;
 import samba.network.Network;
 import samba.services.discovery.Discv5Client;
@@ -14,6 +12,8 @@ import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.pegasys.teku.infrastructure.async.AsyncRunner;
 import tech.pegasys.teku.infrastructure.async.Cancellable;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;

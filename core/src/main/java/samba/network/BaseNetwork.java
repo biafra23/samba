@@ -13,9 +13,9 @@ import com.google.common.base.Throwables;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
-import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public abstract class BaseNetwork implements Network {
 

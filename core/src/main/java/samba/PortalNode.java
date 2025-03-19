@@ -3,8 +3,6 @@ package samba;
 import static samba.logging.StatusLogger.STATUS_LOG;
 import static tech.pegasys.teku.infrastructure.time.SystemTimeProvider.SYSTEM_TIME_PROVIDER;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import samba.config.PortalRestApiConfig;
 import samba.config.SambaConfiguration;
 import samba.config.StartupLogConfig;
@@ -22,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.vertx.core.Vertx;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import oshi.SystemInfo;
 import tech.pegasys.teku.infrastructure.async.AsyncRunnerFactory;
 import tech.pegasys.teku.infrastructure.async.Cancellable;
