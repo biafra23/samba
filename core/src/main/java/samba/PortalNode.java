@@ -1,16 +1,13 @@
 package samba;
 
-import static samba.logging.StatusLogger.STATUS_LOG;
 import static tech.pegasys.teku.infrastructure.time.SystemTimeProvider.SYSTEM_TIME_PROVIDER;
 
-import samba.config.PortalRestApiConfig;
+import samba.async.SambaAsyncRunnerFactory;
+import samba.async.SambaTrackingExecutorFactory;
 import samba.config.SambaConfiguration;
-import samba.config.StartupLogConfig;
-import samba.config.VersionProvider;
 import samba.metrics.MetricsEndpoint;
-import samba.node.Node;
-import samba.services.MainServiceConfig;
-import samba.services.PortalNodeMainController;
+import samba.services.HistoryNetworkMainService;
+import samba.services.HistoryNetworkMainServiceConfig;
 import samba.util.PortalDefaultExceptionHandler;
 
 import java.util.Optional;
@@ -22,17 +19,16 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import oshi.SystemInfo;
 import tech.pegasys.teku.infrastructure.async.AsyncRunnerFactory;
 import tech.pegasys.teku.infrastructure.async.Cancellable;
-import tech.pegasys.teku.infrastructure.async.MetricTrackingExecutorFactory;
 import tech.pegasys.teku.infrastructure.async.OccurrenceCounter;
 import tech.pegasys.teku.infrastructure.events.EventChannels;
 
-public class PortalNode implements Node {
+public final class PortalNode implements AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(PortalNode.class);
 
+  // TODO one jsonrpc server for all sub-networks
   private final Vertx vertx = Vertx.vertx();
   private final ExecutorService threadPool =
       Executors.newCachedThreadPool(
@@ -41,56 +37,52 @@ public class PortalNode implements Node {
 
   // async actions
   private final AsyncRunnerFactory asyncRunnerFactory;
-
   private final MetricsEndpoint metricsEndpoint;
-
-  private final PortalNodeMainController portalNodeMainController;
+  private final HistoryNetworkMainService historyNetworkMainService;
 
   private final OccurrenceCounter rejectedExecutionCounter = new OccurrenceCounter(120);
   private Optional<Cancellable> counterMaintainer = Optional.empty();
+  private SambaSDK sambaSDK;
 
   // private final MetricsPublisherManager metricsPublisher;
 
   public PortalNode(final SambaConfiguration sambaConfiguration) {
-    this.metricsEndpoint = new MetricsEndpoint(sambaConfiguration.getMetricsConfig(), vertx);
+    this.metricsEndpoint = new MetricsEndpoint(sambaConfiguration.getMetricsConfig());
     this.eventChannels =
         new EventChannels(new PortalDefaultExceptionHandler(), metricsEndpoint.getMetricsSystem());
     this.asyncRunnerFactory =
-        AsyncRunnerFactory.createDefault(
-            new MetricTrackingExecutorFactory(
-                metricsEndpoint.getMetricsSystem(), rejectedExecutionCounter));
+        new SambaAsyncRunnerFactory(
+            new SambaTrackingExecutorFactory(
+                rejectedExecutionCounter, metricsEndpoint.getMetricsSystem()));
 
-    final PortalRestApiConfig portalRestApiConfig = sambaConfiguration.getPortalRestApiConfig();
-    STATUS_LOG.onStartup(
-        "1.0 " + (VersionProvider.COMMIT_HASH.map(s -> "Commit: " + s).orElse("")));
-    STATUS_LOG.startupConfigurations(
-        StartupLogConfig.builder()
-            .network("")
-            .hardwareInfo(new SystemInfo().getHardware())
-            .portalNodeRestApiEnabled(portalRestApiConfig.isRestApiDocsEnabled())
-            .portalNodeRestApiInterface(portalRestApiConfig.getRestApiInterface())
-            .portalNodeRestApiPort(portalRestApiConfig.getRestApiPort())
-            .portalNodeRestApiAllowList(portalRestApiConfig.getRestApiHostAllowlist())
-            .build());
-
-    final MainServiceConfig mainServiceConfig =
-        new MainServiceConfig(
+    final HistoryNetworkMainServiceConfig historyNetworkMainServiceConfig =
+        new HistoryNetworkMainServiceConfig(
             asyncRunnerFactory,
             SYSTEM_TIME_PROVIDER,
             eventChannels,
             metricsEndpoint.getMetricsSystem(),
             rejectedExecutionCounter::getTotalCount);
-    this.portalNodeMainController =
-        new PortalNodeMainController(mainServiceConfig, sambaConfiguration, vertx);
-
-    // final String network =
-    // tekuConfig.eth2NetworkConfiguration().getEth2Network().map(Eth2Network::configName).orElse("empty");
+    this.historyNetworkMainService =
+        new HistoryNetworkMainService(historyNetworkMainServiceConfig, sambaConfiguration, vertx);
   }
 
-  @Override
   public void start() {
     metricsEndpoint.start().join();
-    this.portalNodeMainController.start().join();
+    this.historyNetworkMainService
+        .start()
+        .whenComplete(
+            (__, error) -> {
+              if (error != null) {
+                LOG.error("Error when Starting Samba", error);
+              }
+              try {
+                initSambaSDK();
+              } catch (Exception e) {
+                LOG.error("Error when building Samba SDK", e);
+              }
+            })
+        .join();
+
     //      counterMaintainer =
     //              Optional.of(
     //                      serviceConfig
@@ -102,25 +94,52 @@ public class PortalNode implements Node {
     // err)));
   }
 
-  @Override
   public void stop() {
     this.eventChannels
         .stop()
         .orTimeout(30, TimeUnit.SECONDS)
-        .handleException(error -> LOG.warn("Failed to stop event channels cleanly", error))
+        .handleException(error -> LOG.error("Failed to stop event channels cleanly", error))
         .join();
     threadPool.shutdownNow();
     counterMaintainer.ifPresent(Cancellable::cancel);
     asyncRunnerFactory.shutdown();
 
     // Stop services.
-    this.portalNodeMainController
+    this.historyNetworkMainService
         .stop()
         .orTimeout(30, TimeUnit.SECONDS)
         .handleException(error -> LOG.error("Failed to stop services", error))
         .orTimeout(5, TimeUnit.SECONDS)
-        .handleException(error -> LOG.debug("Failed to stop metrics", error))
+        .handleException(error -> LOG.error("Failed to stop metrics", error))
         .thenRun(vertx::close)
         .join();
   }
+
+  @Override
+  public void close() throws Exception {
+    stop();
+  }
+
+  private void initSambaSDK() {
+    // TODO read config to decide what SDK to include
+    this.sambaSDK =
+        SambaSDK.builder()
+            .withHistoryAPI(this.historyNetworkMainService.getSDK())
+            .withDiscv5API(this.historyNetworkMainService.getDiscv5API())
+            .build();
+  }
+
+  SambaSDK getSambaSDK() {
+    return this.sambaSDK;
+  }
+
+  /*
+  * samba.historyAPI().ifPresent(history -> {
+            System.out.println("Using HistoryAPI...");
+            history.getEnr("abc123").ifPresent(enr -> System.out.println("ENR: " + enr));
+            history.getLocalContent(Bytes.fromHexString("0xdeadbeef"))
+                   .ifPresent(content -> System.out.println("Local content: " + content));
+        });
+  *
+  * */
 }

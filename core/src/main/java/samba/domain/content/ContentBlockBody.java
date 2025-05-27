@@ -5,8 +5,10 @@ import samba.schema.content.ssz.blockbody.BlockBodyPostShanghaiContainer;
 import samba.schema.content.ssz.blockbody.BlockBodyPreShanghaiContainer;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Withdrawal;
@@ -15,87 +17,118 @@ public class ContentBlockBody {
 
   private final BlockBodyPreShanghaiContainer blockBodyPreShanghaiContainer;
   private final BlockBodyPostShanghaiContainer blockBodyPostShanghaiContainer;
-  private final long timestamp;
+  private final long blockNumber;
 
   public ContentBlockBody(Bytes sszBytes) {
     BlockBodyPreShanghaiContainer tempBlockBodyPreShanghaiContainer;
     BlockBodyPostShanghaiContainer tempBlockBodyPostShanghaiContainer;
-    long tempTimestamp;
+    long tempBlockNumber;
     try {
       tempBlockBodyPreShanghaiContainer = BlockBodyPreShanghaiContainer.decodeBytes(sszBytes);
       tempBlockBodyPostShanghaiContainer = null;
-      tempTimestamp =
-          HistoryConstants.SHANGHAI_TIMESTAMP - 1; // No guaranteed way to get timestamp from body
+      tempBlockNumber =
+          HistoryConstants.SHANGHAI_BLOCK - 1; // No guaranteed way to get timestamp from body
     } catch (Exception e) {
       tempBlockBodyPreShanghaiContainer = null;
       tempBlockBodyPostShanghaiContainer = BlockBodyPostShanghaiContainer.decodeBytes(sszBytes);
-      tempTimestamp = HistoryConstants.SHANGHAI_TIMESTAMP;
+      tempBlockNumber = HistoryConstants.SHANGHAI_BLOCK;
     }
     this.blockBodyPreShanghaiContainer = tempBlockBodyPreShanghaiContainer;
     this.blockBodyPostShanghaiContainer = tempBlockBodyPostShanghaiContainer;
-    this.timestamp = tempTimestamp;
+    this.blockNumber = tempBlockNumber;
   }
 
   public ContentBlockBody(
-      BlockBodyPreShanghaiContainer blockBodyPreShanghaiContainer, long timestamp) {
+      BlockBodyPreShanghaiContainer blockBodyPreShanghaiContainer, long blockNumber) {
     this.blockBodyPreShanghaiContainer = blockBodyPreShanghaiContainer;
     this.blockBodyPostShanghaiContainer = null;
-    this.timestamp = timestamp;
+    this.blockNumber = blockNumber;
   }
 
   public ContentBlockBody(
-      BlockBodyPostShanghaiContainer blockBodyPostShanghaiContainer, long timestamp) {
+      BlockBodyPostShanghaiContainer blockBodyPostShanghaiContainer, long blockNumber) {
     this.blockBodyPreShanghaiContainer = null;
     this.blockBodyPostShanghaiContainer = blockBodyPostShanghaiContainer;
-    this.timestamp = timestamp;
+    this.blockNumber = blockNumber;
   }
 
   public BlockBodyPreShanghaiContainer getBlockBodyPreShanghaiContainer() {
-    if (timestamp < HistoryConstants.SHANGHAI_TIMESTAMP) {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
       return blockBodyPreShanghaiContainer;
     }
     throw new UnsupportedOperationException("Block body is post-Shanghai");
   }
 
   public BlockBodyPostShanghaiContainer getBlockBodyPostShanghaiContainer() {
-    if (timestamp >= HistoryConstants.SHANGHAI_TIMESTAMP) {
+    if (blockNumber >= HistoryConstants.SHANGHAI_BLOCK) {
       return blockBodyPostShanghaiContainer;
     }
     throw new UnsupportedOperationException("Block body is pre-Shanghai");
   }
 
-  public long getTimestamp() {
-    return timestamp;
+  public long getBlockNumber() {
+    return blockNumber;
   }
 
   public List<Transaction> getTransactions() {
-    if (timestamp < HistoryConstants.SHANGHAI_TIMESTAMP) {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
       return blockBodyPreShanghaiContainer.getTransactions();
     } else {
       return blockBodyPostShanghaiContainer.getTransactions();
     }
   }
 
+  public List<Bytes> getTransactionsRLP() {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
+      return blockBodyPreShanghaiContainer.getTransactionsRLP();
+    } else {
+      return blockBodyPostShanghaiContainer.getTransactionsRLP();
+    }
+  }
+
   public List<BlockHeader> getUncles() {
-    if (timestamp < HistoryConstants.SHANGHAI_TIMESTAMP) {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
       return blockBodyPreShanghaiContainer.getUncles();
     } else {
       return blockBodyPostShanghaiContainer.getUncles();
     }
   }
 
-  public List<Withdrawal> getWithdrawals() {
-    if (timestamp >= HistoryConstants.SHANGHAI_TIMESTAMP) {
-      return blockBodyPostShanghaiContainer.getWithdrawals();
+  public Bytes getUnclesRLP() {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
+      return blockBodyPreShanghaiContainer.getUnclesRLP();
+    } else {
+      return blockBodyPostShanghaiContainer.getUnclesRLP();
     }
-    throw new UnsupportedOperationException("Block body is pre-Shanghai");
+  }
+
+  public Optional<List<Withdrawal>> getWithdrawals() {
+    if (blockNumber >= HistoryConstants.SHANGHAI_BLOCK) {
+      return Optional.ofNullable(blockBodyPostShanghaiContainer.getWithdrawals());
+    }
+    return Optional.empty();
+  }
+
+  public Optional<List<Bytes>> getWithdrawalsRLP() {
+    if (blockNumber >= HistoryConstants.SHANGHAI_BLOCK) {
+      return Optional.ofNullable(blockBodyPostShanghaiContainer.getWithdrawalsRLP());
+    }
+    return Optional.empty();
   }
 
   public Bytes getSszBytes() {
-    if (timestamp < HistoryConstants.SHANGHAI_TIMESTAMP) {
+    if (blockNumber < HistoryConstants.SHANGHAI_BLOCK) {
       return blockBodyPreShanghaiContainer.sszSerialize();
     } else {
       return blockBodyPostShanghaiContainer.sszSerialize();
     }
+  }
+
+  public static ContentBlockBody decode(Bytes sszBytes) {
+    return new ContentBlockBody(sszBytes);
+  }
+
+  public BlockBody getBlockBody() {
+    return new BlockBody(this.getTransactions(), this.getUncles(), this.getWithdrawals());
   }
 }

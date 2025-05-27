@@ -6,14 +6,13 @@ import java.util.HashSet;
 public enum RpcMethod {
   CLIENT_VERSION("clientVersion"),
 
-  DISCV5_NODE_INFO("discv5_nodeInfo"), // DONE
-  DISCV5_UPDATE_NODE_INFO("discv5_updateNodeInfo"), // DONE
+  DISCV5_NODE_INFO("discv5_nodeInfo"),
+  DISCV5_UPDATE_NODE_INFO("discv5_updateNodeInfo"),
+  DISCV5_ROUTING_TABLE_INFO("discv5_routingTableInfo"),
+  DISCV5_GET_ENR("discv5_getEnr"),
 
-  DISCV5_ROUTING_TABLE_INFO("discv5_routingTableInfo"), // TODO need to change disvc5 library
-
-  DISCV5_ADD_ENR("discv5_addEnr"), // TODO need to change disvc5 library
-  DISCV5_GET_ENR("discv5_getEnr"), // DONE
-  DISCV5_DELETE_ENR("discv5_deleteEnr"), // TODO need to change disvc5 library
+  DISCV5_ADD_ENR("discv5_addEnr"),
+  DISCV5_DELETE_ENR("discv5_deleteEnr"),
   DISCV5_LOOK_UP_ENR("discv5_lookupEnr"),
 
   DISCV5_PING("discv5_ping"),
@@ -34,13 +33,16 @@ public enum RpcMethod {
   PORTAL_HISTORY_OFFER("portal_historyOffer"),
 
   PORTAL_HISTORY_RECURSIVE_FIND_NODES("portal_historyRecursiveFindNodes"),
-  PORTAL_HISTORY_GOSSIP("portal_historyGossip"),
 
   PORTAL_HISTORY_GET_CONTENT("portal_historyGetContent"),
-  PORTAL_HISTORYT_RACE_GET_CONTENT("portal_historyTraceGetContent"),
+  PORTAL_HISTORY_TRACE_GET_CONTENT("portal_historyTraceGetContent"),
 
   PORTAL_HISTORY_STORE("portal_historyStore"),
-  PORTAL_HISTORY_LOCAL_CONTENT("portal_historyLocalContent");
+  PORTAL_HISTORY_LOCAL_CONTENT("portal_historyLocalContent"),
+  PORTAL_HISTORY_PUT_CONTENT("portal_historyPutContent"),
+
+  // TODO: migrate to beacon network
+  PORTAL_BEACON_STORE("portal_beaconStore");
 
   private final String methodName;
 

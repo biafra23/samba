@@ -1,14 +1,14 @@
 [versions]
 tuweni = "2.3.1"
-log4j= "2.23.1"
+log4j= "2.24.3"
 vertex= "4.5.9"
-besuInternal = "24.7.0"
-besuEvm = "24.7.0"
+besuInternal = "25.2.1"
+besuEvm = "25.2.1"
 besuCrypto = "23.1.3"
 tekuInternal =  "24.8.0"
 picocli = "4.6.1"
-netty = "4.1.110.Final"
-discovery = "24.9.1"
+netty = "4.1.115.Final"
+discovery = "25.4.0"
 oshi = "6.6.2"
 assertj = "3.26.0"
 mockito = "5.14.2"
@@ -38,6 +38,7 @@ vertx-web= { module = "io.vertx:vertx-web", version.ref = "vertex"}
 
 besu-internal-metrics-core= { module = "org.hyperledger.besu.internal:metrics-core", version.ref = "besuInternal"}
 besu-internal-core = { module = "org.hyperledger.besu.internal:core", version.ref = "besuInternal"}
+besu-internal-trie = { module = "org.hyperledger.besu.internal:trie", version.ref = "besuInternal"}
 besu-internal-config = { module = "org.hyperledger.besu.internal:config", version.ref = "besuInternal"}
 besu-internal-rlp = { module = "org.hyperledger.besu.internal:rlp", version.ref = "besuInternal"}
 besu-internal-plugin-api = { module = "org.hyperledger.besu:plugin-api", version.ref = "besuInternal"}
@@ -60,6 +61,8 @@ discovery = { module = "tech.pegasys.discovery:discovery", version.ref = "discov
 oshi-core = { module = "com.github.oshi:oshi-core", version.ref = "oshi"}
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj"}
 mockito-core= { module = "org.mockito:mockito-core", version.ref = "mockito"}
+mockito-inline= { module = "org.mockito:mockito-inline", version.ref = "mockito"}
+
 projectlombok= { module = "org.projectlombok:lombok", version.ref = "lombok"}
 
 junit-jupiter-api= { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter"}
@@ -72,4 +75,4 @@ jackson-datatype-jdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datat
 jvm-libp2p = { module = "io.libp2p:jvm-libp2p", version.ref = "libp2p"}
 google-guava = { module = "com.google.guava:guava", version.ref = "guava"}
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j-api"}
-
+log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }

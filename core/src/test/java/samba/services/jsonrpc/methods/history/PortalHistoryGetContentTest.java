@@ -7,6 +7,10 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import samba.api.HistoryAPIClient;
+import samba.api.jsonrpc.PortalHistoryGetContent;
+import samba.api.jsonrpc.results.FindContentResult;
+import samba.api.jsonrpc.results.GetContentResult;
 import samba.domain.content.ContentKey;
 import samba.jsonrpc.reponse.JsonRpcErrorResponse;
 import samba.jsonrpc.reponse.JsonRpcRequest;
@@ -15,11 +19,8 @@ import samba.jsonrpc.reponse.JsonRpcResponse;
 import samba.jsonrpc.reponse.JsonRpcSuccessResponse;
 import samba.jsonrpc.reponse.RpcErrorType;
 import samba.network.history.HistoryNetwork;
-import samba.services.jsonrpc.methods.results.FindContentResult;
-import samba.services.jsonrpc.methods.results.GetContentResult;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ public class PortalHistoryGetContentTest {
   @BeforeEach
   public void before() {
     this.historyJsonRpc = mock(HistoryNetwork.class);
-    method = new PortalHistoryGetContent(historyJsonRpc);
+    method = new PortalHistoryGetContent(new HistoryAPIClient(historyJsonRpc));
   }
 
   @Test
@@ -74,9 +75,7 @@ public class PortalHistoryGetContentTest {
                 }));
     final String foundData = "0x1234";
     when(historyJsonRpc.getContent(any(ContentKey.class), anyInt()))
-        .thenReturn(
-            CompletableFuture.completedFuture(
-                Optional.of(new FindContentResult(foundData, false))));
+        .thenReturn(Optional.of(new FindContentResult(foundData, false)));
 
     final JsonRpcResponse expected =
         new JsonRpcSuccessResponse(
@@ -96,8 +95,7 @@ public class PortalHistoryGetContentTest {
                 new Object[] {
                   "0x01720704f3aa11c53cf344ea069db95cecb81ad7453c8f276b2a1062979611f09c"
                 }));
-    when(historyJsonRpc.getContent(any(ContentKey.class), anyInt()))
-        .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+    when(historyJsonRpc.getContent(any(ContentKey.class), anyInt())).thenReturn(Optional.empty());
 
     final JsonRpcResponse expected =
         new JsonRpcErrorResponse(

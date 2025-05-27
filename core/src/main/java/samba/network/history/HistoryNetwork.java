@@ -2,7 +2,12 @@ package samba.network.history;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import samba.api.jsonrpc.results.FindContentResult;
+import samba.api.jsonrpc.results.RecursiveFindNodesResult;
+import samba.api.jsonrpc.results.TraceGetContentResult;
+import samba.domain.content.ContentBlockHeader;
 import samba.domain.content.ContentKey;
+import samba.domain.content.ContentType;
 import samba.domain.content.ContentUtil;
 import samba.domain.dht.LivenessChecker;
 import samba.domain.messages.MessageType;
@@ -16,27 +21,36 @@ import samba.domain.messages.requests.FindNodes;
 import samba.domain.messages.requests.Offer;
 import samba.domain.messages.requests.Ping;
 import samba.domain.messages.response.Accept;
+import samba.domain.messages.response.AcceptCodes;
 import samba.domain.messages.response.Content;
 import samba.domain.messages.response.Nodes;
 import samba.domain.messages.response.Pong;
 import samba.network.BaseNetwork;
 import samba.network.NetworkType;
-import samba.network.PortalGossip;
-import samba.network.RoutingTable;
+import samba.network.history.api.HistoryNetworkInternalAPI;
+import samba.network.history.api.HistoryNetworkProtocolMessageHandler;
+import samba.network.history.routingtable.HistoryRoutingTable;
+import samba.network.history.routingtable.RoutingTable;
 import samba.services.discovery.Discv5Client;
-import samba.services.jsonrpc.methods.results.FindContentResult;
 import samba.services.search.RecursiveLookupTaskFindContent;
+import samba.services.search.RecursiveLookupTaskFindNodes;
+import samba.services.search.RecursiveLookupTaskTraceFindContent;
 import samba.services.utp.UTPManager;
 import samba.storage.HistoryDB;
+import samba.util.ProtocolVersionUtil;
 import samba.util.Util;
+import samba.validation.util.ValidationUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -49,16 +63,25 @@ import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 import org.ethereum.beacon.discovery.util.Functions;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public class HistoryNetwork extends BaseNetwork
-    implements HistoryJsonRpcRequests, HistoryNetworkIncomingRequests, LivenessChecker {
+    implements HistoryNetworkInternalAPI, HistoryNetworkProtocolMessageHandler, LivenessChecker {
+
+  private static final Logger LOG = LoggerFactory.getLogger(HistoryNetwork.class);
 
   private UInt256 nodeRadius;
   private final HistoryDB historyDB;
   final NodeRecordFactory nodeRecordFactory;
   protected RoutingTable routingTable;
   private final UTPManager utpManager;
+
+  public static final int MAX_GOSSIP_COUNT = 4;
+  private static final ExecutorService EXECUTOR_GOSSIP =
+      Executors.newVirtualThreadPerTaskExecutor();
+  private static final int DEFAULT_TIMEOUT = 60;
 
   // TODO standard client version text, standard capabilities list, standard client info extension,
   // default ping with standard arguments
@@ -135,7 +158,8 @@ public class HistoryNetwork extends BaseNetwork
               LOG.trace(
                   "Something when wrong when processing message {} to {}",
                   message.getMessageType(),
-                  nodeRecord.asEnr());
+                  nodeRecord.asEnr(),
+                  error);
               this.routingTable.removeNode(nodeRecord);
               this.routingTable.removeRadius(nodeRecord.getNodeId());
               return SafeFuture.completedFuture(Optional.empty());
@@ -183,6 +207,10 @@ public class HistoryNetwork extends BaseNetwork
             contentMessage -> {
               Content content = contentMessage.getMessage();
               ContentKey contentKey = ContentKey.decode(message.getContentKey());
+              int protocolVersion =
+                  ProtocolVersionUtil.getHighestSupportedProtocolVersion(
+                          ProtocolVersionUtil.getSupportedProtocolVersions(nodeRecord))
+                      .get();
               // TODO: Validate NodeRadius
               return switch (content.getContentType()) {
                 case Content.UTP_CONNECTION_ID ->
@@ -190,14 +218,16 @@ public class HistoryNetwork extends BaseNetwork
                         .findContentRead(nodeRecord, content.getConnectionId())
                         .thenCompose(
                             data -> {
-                              boolean saved = historyDB.saveContent(message.getContentKey(), data);
+                              if (protocolVersion != 0) {
+                                data = Util.parseAcceptedContent(data);
+                              }
+                              boolean saved = this.store(message.getContentKey(), data);
                               // Gossip new content to network
                               if (saved) {
                                 Set<NodeRecord> foundNodes =
-                                    getFoundNodes(
-                                        contentKey, PortalGossip.MAX_GOSSIP_COUNT + 1, true);
+                                    getFoundNodes(contentKey, MAX_GOSSIP_COUNT + 1, true);
                                 foundNodes.remove(nodeRecord);
-                                PortalGossip.gossip(this, foundNodes, message.getContentKey());
+                                this.gossip(foundNodes, message.getContentKey(), data);
                               }
                               return SafeFuture.completedFuture(
                                   Optional.of(new FindContentResult(data.toHexString(), true)));
@@ -207,14 +237,13 @@ public class HistoryNetwork extends BaseNetwork
                 case Content.CONTENT_TYPE -> {
                   // TODO validate content and key before persisting it or responding
 
-                  boolean saved =
-                      historyDB.saveContent(message.getContentKey(), content.getContent());
+                  boolean saved = this.store(message.getContentKey(), content.getContent());
                   // Gossip new content to network
                   if (saved) {
                     Set<NodeRecord> foundNodes =
-                        getFoundNodes(contentKey, PortalGossip.MAX_GOSSIP_COUNT + 1, true);
+                        getFoundNodes(contentKey, MAX_GOSSIP_COUNT + 1, true);
                     foundNodes.remove(nodeRecord);
-                    PortalGossip.gossip(this, foundNodes, message.getContentKey());
+                    this.gossip(foundNodes, message.getContentKey(), content.getContent());
                   }
                   yield SafeFuture.completedFuture(
                       Optional.of(
@@ -244,7 +273,17 @@ public class HistoryNetwork extends BaseNetwork
     checkArgument(
         content.size() == message.getContentKeys().size(),
         "There should be same contentItems and contentKeys");
-
+    //    IntStream.range(0, content.size())
+    //        .forEach(
+    //            i -> {
+    //              Bytes bytes = content.get(i);
+    //              checkArgument(bytes != null, "Content at index %s is null", i);
+    //              checkArgument(
+    //                  bytes.size() >= 1,
+    //                  "Content at index %s must have size >= 1, but was %s",
+    //                  i,
+    //                  bytes.size());
+    //            });
     // TODO check if this is ok?
     //    checkArgument(
     //        this.routingTable.findNode(nodeRecord.getNodeId()).isPresent(),
@@ -256,24 +295,37 @@ public class HistoryNetwork extends BaseNetwork
         .thenCompose(
             acceptMessage -> {
               Accept accept = acceptMessage.getMessage();
+              int protocolVersion = accept.getProtocolVersion();
               byte[] acceptedContent = accept.getContentKeysByteArray();
               List<Bytes> contentToOffer =
                   IntStream.range(0, acceptedContent.length)
                       .mapToObj(
                           idx -> {
-                            if (acceptedContent[idx] == 0) return null;
-                            Bytes currentContent = content.get(idx);
-                            // TODO validate if is needed to go to the db.
-                            if (currentContent.isEmpty()) {
-                              Bytes contentKey = message.getContentKeys().get(idx);
-                              return historyDB
-                                  .get(ContentKey.decode(contentKey))
-                                  .orElse(currentContent);
+                            if (protocolVersion == 0) {
+                              if (acceptedContent[idx] == 0) return null;
+
+                              return content.get(idx);
+
+                            } else {
+                              if (acceptedContent[idx] != AcceptCodes.ACCEPT.getValue())
+                                return null;
+                              // Bytes currentContent = content.get(idx);
+                              //                            // TODO validate if is needed to go to
+                              // the
+                              // db and save the content
+                              //                            if (currentContent.isZero()) {
+                              //                              Bytes contentKey =
+                              // message.getContentKeys().get(idx);
+                              //                              return historyDB
+                              //
+                              // .get(ContentKey.decode(contentKey))
+                              //                                  .orElse(currentContent);
+                              //                            }
+                              return content.get(idx);
                             }
-                            return currentContent;
                           })
                       .filter(Objects::nonNull)
-                      .map(data -> Bytes.concatenate(Util.writeUnsignedLeb128(data.size()), data))
+                      .map(Util::addUnsignedLeb128SizeToData)
                       .toList();
 
               Optional.ofNullable(contentToOffer)
@@ -321,10 +373,16 @@ public class HistoryNetwork extends BaseNetwork
   }
 
   @Override
-  public void addEnr(String enr) {
-    final NodeRecord nodeRecord = NodeRecordFactory.DEFAULT.fromEnr(enr);
-    this.routingTable.addOrUpdateNode(nodeRecord);
-    this.routingTable.updateRadius(nodeRecord.getNodeId(), nodeRadius.max());
+  public boolean addEnr(String enr) {
+    try {
+      final NodeRecord nodeRecord = NodeRecordFactory.DEFAULT.fromEnr(enr);
+      this.routingTable.addOrUpdateNode(nodeRecord);
+      this.routingTable.updateRadius(nodeRecord.getNodeId(), nodeRadius.max());
+      return true;
+    } catch (Exception e) {
+      LOG.debug("Error when adding enr");
+      return false;
+    }
   }
 
   @Override
@@ -354,7 +412,58 @@ public class HistoryNetwork extends BaseNetwork
 
   @Override
   public boolean store(Bytes contentKey, Bytes contentValue) {
+    ContentType contentType = ContentType.fromContentKey(contentKey);
+
+    if (contentType == ContentType.BLOCK_BODY || contentType == ContentType.RECEIPT) {
+      Optional<ContentBlockHeader> associatedHeader = getAssociatedBlockHeader(contentKey);
+      if (associatedHeader.isEmpty()) {
+        return false;
+      }
+
+      boolean isValid =
+          switch (contentType) {
+            case ContentType.BLOCK_BODY ->
+                ValidationUtil.isBlockBodyValid(associatedHeader.get(), contentValue);
+            case ContentType.RECEIPT ->
+                ValidationUtil.isReceiptsValid(associatedHeader.get(), contentValue);
+            default -> true;
+          };
+
+      if (!isValid) {
+        LOG.debug("{} is not valid for block header {}", contentType, contentKey);
+        return false;
+      }
+    }
+
     return this.historyDB.saveContent(contentKey, contentValue);
+  }
+
+  private Optional<ContentBlockHeader> getAssociatedBlockHeader(Bytes contentKey) {
+    try {
+      Bytes blockHeaderKeySsz =
+          Bytes.concatenate(Bytes.of(ContentType.BLOCK_HEADER.getByteValue()), contentKey.slice(1));
+      ContentKey blockHeaderKey = ContentKey.decode(blockHeaderKeySsz);
+
+      Optional<Bytes> blockHeaderBytes = historyDB.get(blockHeaderKey);
+      if (blockHeaderBytes.isPresent()) {
+        return ContentUtil.createBlockHeaderfromSszBytes(blockHeaderBytes.get());
+      }
+
+      Optional<FindContentResult> searchResult = getContent(blockHeaderKey, DEFAULT_TIMEOUT);
+      if (searchResult.isPresent()) {
+        Optional<ContentBlockHeader> blockHeader =
+            ContentUtil.createBlockHeaderfromSszBytes(
+                Bytes.fromHexString(searchResult.get().getContent()));
+        this.store(
+            blockHeaderKeySsz, blockHeader.get().getSszBytes()); // Store newly located block header
+        return blockHeader;
+      }
+
+      return Optional.empty();
+    } catch (Exception e) {
+      LOG.debug("Error when retrieving associated block header for {}", contentKey, e);
+      return Optional.empty();
+    }
   }
 
   @Override
@@ -388,7 +497,7 @@ public class HistoryNetwork extends BaseNetwork
   }
 
   public Optional<NodeRecord> findClosestNodeToContentKey(Bytes contentKey) {
-    return this.routingTable.findClosestNodeToContentKey(contentKey);
+    return this.routingTable.findClosestNodeToKey(contentKey);
   }
 
   public Optional<NodeRecord> nodeRecordFromEnr(String enr) {
@@ -478,6 +587,10 @@ public class HistoryNetwork extends BaseNetwork
 
   @Override
   public PortalWireMessage handleFindContent(NodeRecord nodeRecord, FindContent findContent) {
+    int protocolVersion =
+        ProtocolVersionUtil.getHighestSupportedProtocolVersion(
+                ProtocolVersionUtil.getSupportedProtocolVersions(nodeRecord))
+            .get();
     ContentKey contentKey =
         ContentUtil.createContentKeyFromSszBytes(findContent.getContentKey()).get();
     Optional<Bytes> content = historyDB.get(contentKey);
@@ -485,8 +598,14 @@ public class HistoryNetwork extends BaseNetwork
       return new Content(generateEnrs(contentKey, nodeRecord));
     }
     if (content.get().size() > PortalWireMessage.MAX_CUSTOM_PAYLOAD_BYTES) {
-      int connectionId = this.utpManager.foundContentWrite(nodeRecord, content.get());
-
+      int connectionId;
+      if (protocolVersion == 0) {
+        connectionId = this.utpManager.foundContentWrite(nodeRecord, content.get());
+      } else {
+        connectionId =
+            this.utpManager.foundContentWrite(
+                nodeRecord, Util.addUnsignedLeb128SizeToData(content.get()));
+      }
       return new Content(connectionId);
     }
     return new Content(content.get());
@@ -505,26 +624,53 @@ public class HistoryNetwork extends BaseNetwork
 
   @Override
   public PortalWireMessage handleOffer(NodeRecord srcNode, Offer offer) {
+    int protocolVersion =
+        ProtocolVersionUtil.getHighestSupportedProtocolVersion(
+                ProtocolVersionUtil.getSupportedProtocolVersions(srcNode))
+            .get();
     try {
+      LOG.info("Offer from {}, Protocol Version {}", srcNode.asEnr(), protocolVersion);
+      LOG.info("Offer contentKeys: {}", offer.getContentKeys());
       // TODO validate contentKeys.
-      if (offer.getContentKeys().isEmpty()) return new Accept(0, Bytes.EMPTY);
-      byte[] contentKeysBitArray = new byte[offer.getContentKeys().size()];
+      if (offer.getContentKeys().isEmpty()) return new Accept(0, Bytes.EMPTY, protocolVersion);
+      byte[] contentKeysByteArray = new byte[offer.getContentKeys().size()];
       List<Bytes> contentKeyAccepted = new ArrayList<>();
-      for (int x = 0; x < offer.getContentKeys().size(); x++) {
-        Bytes contentKey = offer.getContentKeys().get(x);
+      if (protocolVersion == 0) {
+        for (int x = 0; x < offer.getContentKeys().size(); x++) {
+          Bytes contentKey = offer.getContentKeys().get(x);
 
-        final int distance = Functions.logDistance(contentKey, this.discv5Client.getNodeId().get());
-        if (UInt256.valueOf(distance).compareTo(this.nodeRadius) >= 0) {
-          LOG.info("ContentKey: {} is outside radius: {}", distance, this.nodeRadius);
-          continue;
+          final int distance =
+              Functions.logDistance(contentKey, this.discv5Client.getNodeId().get());
+          if (UInt256.valueOf(distance).compareTo(this.nodeRadius) >= 0) {
+            LOG.info("ContentKey: {} is outside radius: {}", distance, this.nodeRadius);
+          } else if (this.historyDB.get(ContentKey.decode(contentKey)).isEmpty()) {
+            LOG.info("ContentKey: {} not found in local storage", contentKey.toHexString());
+            contentKeysByteArray[x] = 1;
+            contentKeyAccepted.add(contentKey);
+          }
         }
-        if (this.historyDB.get(ContentKey.decode(contentKey)).isEmpty()) {
-          contentKeysBitArray[x] = 1;
-          contentKeyAccepted.add(contentKey);
+      } else {
+        Arrays.fill(contentKeysByteArray, AcceptCodes.GENERIC_DECLINE.getValue());
+        for (int x = 0; x < offer.getContentKeys().size(); x++) {
+          Bytes contentKey = offer.getContentKeys().get(x);
+
+          final int distance =
+              Functions.logDistance(contentKey, this.discv5Client.getNodeId().get());
+          if (UInt256.valueOf(distance).compareTo(this.nodeRadius) >= 0) {
+            LOG.info("ContentKey: {} is outside radius: {}", distance, this.nodeRadius);
+            contentKeysByteArray[x] = AcceptCodes.CONTENT_NOT_IN_RADIUS.getValue();
+          } else if (this.historyDB.get(ContentKey.decode(contentKey)).isEmpty()) {
+            LOG.info("ContentKey: {} not found in local storage", contentKey.toHexString());
+            contentKeysByteArray[x] = AcceptCodes.ACCEPT.getValue();
+            contentKeyAccepted.add(contentKey);
+          } else {
+            LOG.info("ContentKey: {} found in local storage", contentKey.toHexString());
+            contentKeysByteArray[x] = AcceptCodes.CONTENT_ALREADY_STORED.getValue();
+          }
         }
       }
-      if (contentKeyAccepted.isEmpty()) return new Accept(0, Bytes.of(contentKeysBitArray));
-
+      if (contentKeyAccepted.isEmpty())
+        return new Accept(0, Bytes.of(contentKeysByteArray), protocolVersion);
       int connectionId =
           this.utpManager.acceptRead(
               srcNode,
@@ -532,14 +678,14 @@ public class HistoryNetwork extends BaseNetwork
                 List<Bytes> parsedContent = Util.parseAcceptedContents(newContent);
                 if (parsedContent.size() == contentKeyAccepted.size()) {
                   for (int i = 0; i < parsedContent.size(); i++) {
-                    this.historyDB.saveContent(contentKeyAccepted.get(i), parsedContent.get(i));
+                    this.store(contentKeyAccepted.get(i), parsedContent.get(i));
                   }
                 }
               });
-      return new Accept(connectionId, Bytes.of(contentKeysBitArray));
+      return new Accept(connectionId, Bytes.of(contentKeysByteArray), protocolVersion);
     } catch (Exception e) {
       LOG.trace("Error when handling Offer Message");
-      return new Accept(0, Bytes.EMPTY);
+      return new Accept(0, Bytes.EMPTY, protocolVersion);
     }
   }
 
@@ -582,13 +728,13 @@ public class HistoryNetwork extends BaseNetwork
       Function<Throwable, CompletionStage<Optional<V>>> createDefaultErrorWhenSendingMessage(
           MessageType message) {
     return error -> {
-      LOG.trace("Something when wrong when sending a {} with error {}", message, error);
+      LOG.info("Something when wrong when sending a {} with error {}", message, error);
       return SafeFuture.completedFuture(Optional.empty());
     };
   }
 
-  public CompletableFuture<Optional<FindContentResult>> getContent(
-      ContentKey contentKey, int timeout) {
+  @Override
+  public Optional<FindContentResult> getContent(ContentKey contentKey, int timeout) {
     RecursiveLookupTaskFindContent task =
         new RecursiveLookupTaskFindContent(
             this,
@@ -596,16 +742,99 @@ public class HistoryNetwork extends BaseNetwork
             this.discv5Client.getHomeNodeRecord().getNodeId(),
             getFoundNodes(contentKey),
             timeout);
-    return task.execute();
+    CompletableFuture<Optional<FindContentResult>> future = task.execute();
+    try {
+      Optional<FindContentResult> result = future.join();
+      return result;
+    } catch (Exception e) {
+      LOG.error("Error when executing getContent", e);
+      return Optional.empty();
+    }
   }
 
-  private Set<NodeRecord> getFoundNodes(ContentKey contentKey) {
+  @Override
+  public Optional<TraceGetContentResult> traceGetContent(
+      ContentKey contentKey, int timeout, long startTime) {
+    RecursiveLookupTaskTraceFindContent task =
+        new RecursiveLookupTaskTraceFindContent(
+            this,
+            contentKey.getSszBytes(),
+            this.discv5Client.getHomeNodeRecord().getNodeId(),
+            getFoundNodes(contentKey),
+            timeout,
+            startTime);
+    CompletableFuture<Optional<TraceGetContentResult>> future = task.execute();
+    try {
+      Optional<TraceGetContentResult> result = future.join();
+      return result;
+    } catch (Exception e) {
+      LOG.error("Error when executing traceGetContent", e);
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public Optional<RecursiveFindNodesResult> recursiveFindNodes(
+      final String nodeId, Set<NodeRecord> excludedNodes, final int timeout) {
+    Bytes nodeIdBytes = Bytes.fromHexString(nodeId);
+    RecursiveLookupTaskFindNodes task =
+        new RecursiveLookupTaskFindNodes(
+            this,
+            nodeIdBytes,
+            this.discv5Client.getHomeNodeRecord().getNodeId(),
+            this.routingTable.findClosestNodesToKey(nodeIdBytes, 10, false),
+            excludedNodes,
+            timeout);
+    CompletableFuture<Optional<RecursiveFindNodesResult>> future = task.execute();
+    try {
+      Optional<RecursiveFindNodesResult> result = future.join();
+      return result;
+    } catch (Exception e) {
+      LOG.error("Error when executing recursiveFindNodes", e);
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public UInt256 getLocalNodeId() {
+    return UInt256.fromBytes(this.discv5Client.getHomeNodeRecord().getNodeId());
+  }
+
+  public Set<NodeRecord> getFoundNodes(ContentKey contentKey) {
     return this.getFoundNodes(contentKey, 10, false);
   }
 
-  private Set<NodeRecord> getFoundNodes(ContentKey contentKey, int count, boolean inRadius) {
-    return this.routingTable.findClosestNodesToContentKey(
-        contentKey.getSszBytes(), count, inRadius);
+  @Override
+  public Set<NodeRecord> getFoundNodes(ContentKey contentKey, int count, boolean inRadius) {
+    return this.routingTable.findClosestNodesToKey(contentKey.getSszBytes(), count, inRadius);
+  }
+
+  @Override
+  public void gossip(Set<NodeRecord> nodes, Bytes key, Bytes content) {
+    // checkArgument(nodes != null && !nodes.isEmpty(), "Nodes must not be null or empty");
+    checkArgument(key != null, "Key must not be null");
+    checkArgument(content != null, "Content must not be null");
+
+    final List<Bytes> keyList = List.of(key);
+    final List<Bytes> contentList = List.of(content);
+    final Offer offer = new Offer(keyList);
+
+    nodes.forEach(
+        node ->
+            SafeFuture.runAsync(
+                () -> {
+                  try {
+                    this.offer(node, contentList, offer);
+                  } catch (Exception e) {
+                    LOG.error("Failed to gossip to node {}: {}", node, e.getMessage(), e);
+                  }
+                },
+                EXECUTOR_GOSSIP));
+  }
+
+  @Override
+  public int getMaxGossipCount() {
+    return MAX_GOSSIP_COUNT;
   }
 
   @Override

@@ -7,7 +7,7 @@ plugins {
 //group = "com.github.biafra23.samba"
 
 jar {
-  archiveBaseName = 'core'
+  archiveBaseName = 'samba'
   manifest {
     attributes(
       'Specification-Title': archiveBaseName,
@@ -20,8 +20,10 @@ jar {
 }
 
 dependencies {
+  implementation libs.slf4j.api
   implementation libs.apache.logging.log4j.api
   implementation libs.apache.logging.log4j.core
+
   implementation libs.tuweni.bytes
   implementation libs.tuweni.crypto
   implementation libs.tuweni.rlp
@@ -31,6 +33,7 @@ dependencies {
 
   implementation libs.besu.internal.metrics.core
   implementation libs.besu.internal.core
+  implementation libs.besu.internal.trie
   implementation libs.besu.internal.config
   implementation libs.besu.internal.plugin.api //TODO need to be removed
   implementation libs.besu.internal.rlp
@@ -61,7 +64,7 @@ dependencies {
 
   implementation project(':storage-rocksdb')
   implementation project(':server-json-rpc')
-  implementation 'com.github.meldsun0:utp:1.0-SNAPSHOT'
+  implementation 'com.github.meldsun0:utp:2.0-SNAPSHOT'
 
   compileOnly libs.projectlombok
   annotationProcessor libs.projectlombok
@@ -71,7 +74,12 @@ dependencies {
   testImplementation libs.assertj.core
   testRuntimeOnly libs.junit.jupiter.engine
 
-  runtimeOnly 'org.apache.logging.log4j:log4j-jul:2.24.2'
+  runtimeOnly libs.apache.logging.log4j.api
+  runtimeOnly libs.apache.logging.log4j.core
+  runtimeOnly libs.log4j.slf4j2.impl
+
+  // Optional: JUL to Log4j2 bridge
+  //runtimeOnly libs.log4j.jul
 }
 
 publishing {

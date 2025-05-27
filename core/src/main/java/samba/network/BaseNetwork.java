@@ -4,8 +4,10 @@ import samba.domain.messages.PortalWireMessage;
 import samba.domain.messages.PortalWireMessageDecoder;
 import samba.network.exception.BadRequestException;
 import samba.network.exception.MessageToOurselfException;
+import samba.network.exception.NoSupportedProtocolVersionException;
 import samba.network.exception.StoreNotAvailableException;
 import samba.services.discovery.Discv5Client;
+import samba.util.ProtocolVersionUtil;
 
 import java.util.Optional;
 
@@ -19,7 +21,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public abstract class BaseNetwork implements Network {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(BaseNetwork.class);
+  protected final Logger LOG = LoggerFactory.getLogger(getClass());
   protected NetworkType networkType;
   protected Discv5Client discv5Client;
   protected UInt256 nodeRadius;
@@ -32,7 +34,7 @@ public abstract class BaseNetwork implements Network {
 
   protected SafeFuture<Optional<PortalWireMessage>> sendMessage(
       NodeRecord destinationNode, PortalWireMessage messageRequest) {
-    LOG.info(
+    LOG.debug(
         "Send Portal {} message to {}",
         messageRequest.getMessageType(),
         destinationNode.getNodeId());
@@ -42,14 +44,25 @@ public abstract class BaseNetwork implements Network {
     if (isOurself(destinationNode)) {
       return SafeFuture.failedFuture(new MessageToOurselfException());
     }
+    Optional<Integer> protocolVersion =
+        ProtocolVersionUtil.getHighestSupportedProtocolVersion(
+            ProtocolVersionUtil.getSupportedProtocolVersions(destinationNode));
+    if (protocolVersion.isEmpty()) {
+      return SafeFuture.failedFuture(new NoSupportedProtocolVersionException());
+    }
+
     // TODO FIX chain order
     return SafeFuture.of(
             discv5Client
-                .sendDisv5Message(
+                .sendDiscv5Message(
                     destinationNode, this.networkType.getValue(), messageRequest.getSszBytes())
                 .thenApply(
                     (sszbytes) ->
-                        parseResponse(sszbytes, destinationNode, messageRequest)) // Change
+                        parseResponse(
+                            sszbytes,
+                            destinationNode,
+                            messageRequest,
+                            protocolVersion.get())) // Change
                 .thenApply(Optional::of))
         .thenPeek(this::logResponse)
         .exceptionallyCompose(error -> handleSendMessageError(messageRequest, error));
@@ -64,12 +77,12 @@ public abstract class BaseNetwork implements Network {
 
   private void logResponse(Optional<PortalWireMessage> portalWireMessage) {
     portalWireMessage.ifPresent(
-        (message) -> LOG.trace("Portal {} message received", message.getMessageType()));
+        (message) -> LOG.debug("Portal {} message received", message.getMessageType()));
   }
 
   private SafeFuture<Optional<PortalWireMessage>> handleSendMessageError(
       PortalWireMessage message, Throwable error) {
-    LOG.trace("Something when wrong when sending a Portal {} message", message.getMessageType());
+    LOG.debug("Something when wrong when sending a Portal {} message", message.getMessageType());
     final Throwable rootCause = Throwables.getRootCause(error);
     if (rootCause instanceof IllegalArgumentException) {
       return SafeFuture.failedFuture(new BadRequestException(rootCause.getMessage()));
@@ -78,8 +91,11 @@ public abstract class BaseNetwork implements Network {
   }
 
   private PortalWireMessage parseResponse(
-      Bytes sszbytes, NodeRecord destinationNode, PortalWireMessage requestMessage) {
+      Bytes sszbytes,
+      NodeRecord destinationNode,
+      PortalWireMessage requestMessage,
+      int protocolVersion) {
     // TODO validate appropriate response. If I send a Ping I must get a PONG
-    return PortalWireMessageDecoder.decode(destinationNode, sszbytes);
+    return PortalWireMessageDecoder.decode(destinationNode, sszbytes, protocolVersion);
   }
 }

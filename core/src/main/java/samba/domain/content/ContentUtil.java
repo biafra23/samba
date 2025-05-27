@@ -28,15 +28,6 @@ public class ContentUtil {
     return receipts;
   }
 
-  public static boolean isBlockBodyValid(ContentBlockHeader blockHeader, Bytes blockBody) {
-    // TODO given a BlockHeader we should validate that value that is a sszbytes of a blockBody
-    /*
-    Compare header timestamp against SHANGHAI_TIMESTAMP to determine what encoding scheme the block body uses.
-    Decode the block body using either pre-shanghai or post-shanghai encoding.
-    Validate the decoded block body against the roots in the header.*/
-    return true;
-  }
-
   public static Bytes createBlockNumberInSSZ(final ContentBlockHeader contentBlockHeader) {
     return new ContentKey(
             ContentType.BLOCK_HEADER_BY_NUMBER,

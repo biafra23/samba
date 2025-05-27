@@ -1,5 +1,6 @@
 package samba.domain.content;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -8,7 +9,8 @@ public enum ContentType {
   BLOCK_HEADER(0x00),
   BLOCK_BODY(0x01),
   RECEIPT(0x02),
-  BLOCK_HEADER_BY_NUMBER(0x03);
+  BLOCK_HEADER_BY_NUMBER(0x03),
+  EPHEMERAL_BLOCK_HEADER(0x04); // TODO unsupported
 
   private final byte value;
   private static final int BYTE_MASK = 0xFF;
@@ -23,6 +25,8 @@ public enum ContentType {
 
   public static ContentType fromContentKey(Bytes contentKey) {
     checkNotNull(contentKey, "ContentKey is null");
+    checkArgument(!contentKey.isEmpty(), "Content is empty");
+    checkArgument(!contentKey.isZero(), "Content can not be zero bytes");
     Bytes selector = contentKey.slice(0, 1);
     ContentType contentType = fromInt(selector.toInt());
     checkNotNull(contentType, "Invalid content type from byte: " + selector);

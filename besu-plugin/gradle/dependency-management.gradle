@@ -1,5 +1,12 @@
 repositories {
   maven {
+    url "https://artifacts.consensys.net/public/linea-besu/maven/"
+    content {
+      includeGroupByRegex('io\\.consensys\\..*')
+      includeGroupByRegex('org\\.hyperledger\\..*')
+    }
+  }
+  maven {
     url 'https://hyperledger.jfrog.io/hyperledger/besu-maven'
     content { includeGroupByRegex('org\\.hyperledger\\..*') }
   }
@@ -10,12 +17,10 @@ repositories {
     }
   }
   maven {
-    url "https://dl.cloudsmith.io/public/libp2p/jvm-libp2p/maven/"
-    content { includeGroupByRegex('io\\.libp2p($|\\..*)') }
-  }
-  maven {
-    url "https://hyperledger.jfrog.io/artifactory/besu-maven/"
-    content { includeGroupByRegex('org\\.hyperledger\\.besu($|\\..*)') }
+    url "https://artifacts.consensys.net/public/linea-arithmetization/maven/"
+    content {
+      includeGroupByRegex('net\\.consensys\\.linea\\..*?')
+    }
   }
   mavenCentral()
   mavenLocal()
@@ -40,7 +45,7 @@ dependencyManagement {
     // ToDo: remove when fixed in Besu, force version to avoid conflict with previous version
     dependency 'org.apache.logging.log4j:log4j-api:2.24.1'
     dependency 'org.apache.logging.log4j:log4j-core:2.24.1'
-
+    dependency 'tech.pegasys.discovery:discovery:25.4.0'
     dependency 'org.wiremock:wiremock:3.12.0'
   }
 }
@@ -61,6 +66,8 @@ dependencyManagement {
     // ToDo: remove when fixed in Besu, force version to avoid conflict with previous version
     dependency 'org.apache.logging.log4j:log4j-api:2.24.1'
     dependency 'org.apache.logging.log4j:log4j-core:2.24.1'
+    dependency 'tech.pegasys.discovery:discovery:25.4.0'
+
 
   }
 }

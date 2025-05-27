@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import samba.api.HistoryAPIClient;
+import samba.api.jsonrpc.PortalHistoryDeleteEnr;
 import samba.jsonrpc.reponse.JsonRpcErrorResponse;
 import samba.jsonrpc.reponse.JsonRpcRequest;
 import samba.jsonrpc.reponse.JsonRpcRequestContext;
@@ -26,7 +28,7 @@ public class PortalHistoryDeleteEnrTest {
   @BeforeEach
   public void before() {
     this.historyJsonRpc = mock(HistoryNetwork.class);
-    method = new PortalHistoryDeleteEnr(historyJsonRpc);
+    method = new PortalHistoryDeleteEnr(new HistoryAPIClient(historyJsonRpc));
   }
 
   @Test

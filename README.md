@@ -82,11 +82,12 @@ All the unit tests are run as part of the build, but can be explicitly triggered
 
 ## Running Hive locally
 
-To run Hive locally against Samab you should follow these instractions: 
+To run Hive locally against Samba you should follow these instructions: 
 
 Clone Hive:
 ```shell script
 git clone https://github.com/ethereum/hive
+cd hive
 go build .
 go build ./cmd/hiveview  
 ```
@@ -97,18 +98,28 @@ Build a local Docker image from Samba:
 ./gradlew distDocker  
 ```
 
-* Copy hive/samba folder to hive/clients
-* Change /hive/samba/Dockerfile by adding the recent created image. 
+* Copy ~/samba/hive/samba folder to ~/hive/clients
+* Change ~/hive/clients/samba/Dockerfile. Replace the values for ARG `baseimage` and ARG `tag` with the values for the recently created image. 
 
 Run Hive tests:
 ```shell script
 ./hive -sim portal -client samba,trin -sim.limit history 
 ```
+
+```shell script
+./hive  --sim devp2p --sim.limit discv5 --client samba --docker.output 
+```
+
+If you get the following error on macOS: `can't get docker version: Get "http://unix.sock/v1.25/version": dial unix /var/run/docker.sock: connect: no such file or directory`, you 
+need to enable `Allow the default Docker socket to be used (requires password)` in `Settings` -> `Advanced`
+
 View logs output and results:
 ```shell script
 ./hiveview --serve --logdir ./workspace/logs
 ```
-## JSON-RPC API (14)
+## [JSON-RPC API (20)](https://samba-portal-node.postman.co/workspace/Samba-Portal-Node-Workspace~8bf54719-5e6d-4476-8b33-6434dc57d833/request/33150235-eb63c4bf-82ff-477e-a17d-616657e9cdbc?action=share&creator=33150235&ctx=documentation&active-environment=33150235-5c222146-bd60-431b-bb15-f3f9dc8fc9cc)
+
+#### History
 - portal_historyAddEnr
 - portal_historyDeleteEnr
 - portal_historyFindContent
@@ -116,14 +127,21 @@ View logs output and results:
 - portal_historyGetContent
 - portal_historyGetEnr
 - portal_historyLocalContent
-- potal_historyLookupEnr
+- portal_historyLookupEnr
 - portal_historyOffer
 - portal_historyPing
 - portal_historyStore
+- portal_historyPutContent
 
+#### Discv5
 - discv5_getEnr,
 - discv5_nodeInfo, 
 - discv5_updateNodeInfo
+- discv5_talkReq
+- discv5_findNode
+- discv5_routingTableInfo
+- discv5_addEnr
+- discv5_deleteEnr
 
 When running against Hive:
 ```shell script
@@ -133,16 +151,44 @@ You should be getting:
 
 ![Tests](https://github.com/user-attachments/assets/9c812ad3-cd17-4abc-9f29-70991a80a71a)
 
+## CLI options
+
+| Command Line Argument        | Default Value   |
+|------------------------------|-----------------|
+| `--unsafe-private-key=`      |                 |
+| `--portal-subnetworks=`      | history-network |
+| `--use-default-bootnodes=`   | true            |
+| `--p2p-ip=`                  | 0.0.0.0         |
+| `--jsonrpc-port=`            | 8545            |
+| `--jsonrpc-host=`            | 127.0.0.1       |
+| `--disable-json-rpc-server=` | false           |
+| `-disable-rest--server=`     | false           |
+| `--p2p-advertised-ip=`       | 0.0.0.0         |
+| `--logging=`                 | INFO            |
+| `--data-path=`               | ./build/samba            |
+
+
+
+
 ## Hardware Requirements
 
 Minimum:
-
-TO-DO
 
 Recommended:
 
 TO-DO
 
+## Setup
+
+- Besu  + Samba:
+  - Mount volume:
+    - sudo mkfs.xfs /dev/nvme2n1
+    - sudo mkdir -p /mnt/ebs1
+    - sudo mount /dev/nvme2n1 /mnt/ebs1
+  - Provide correct access:
+    - sudo chown -R 1000:1000 /mnt/ebs1
+  - Run Besu:
+    - docker run -e HOST_IP=$(curl -s ifconfig.me) -d --name besu --user 1000 -p 8545:8545 -p 9545:9545 -p 9000:9000/udp -v /mnt/ebs1:/data  meldsun/instances:besu-with-samba-arm64 
 
 ### Useful links
 * [Devcon SEA History Expiry and Portal Network session](https://notes.ethereum.org/_XVO7jmXTGOwZmhR5-3T9Q)

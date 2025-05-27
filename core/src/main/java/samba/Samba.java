@@ -2,7 +2,7 @@ package samba;
 
 import samba.cli.SambaCommand;
 import samba.config.SambaConfiguration;
-import samba.node.Node;
+import samba.logging.LogConfigurator;
 import samba.samba.SambaDefaultExceptionHandler;
 
 import java.io.PrintWriter;
@@ -11,29 +11,43 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public final class Samba {
 
+  private static final Logger LOG = LoggerFactory.getLogger(Samba.class);
+
   public static void main(String[] args) {
-    System.out.println("Received arguments: " + Arrays.toString(args));
+    init(args);
+  }
+
+  public static SambaSDK init(String[] args) {
+    LOG.info("Received arguments: {}", Arrays.toString(args));
     Thread.setDefaultUncaughtExceptionHandler(new SambaDefaultExceptionHandler());
     try {
-      Optional<Node> maybeNode = Samba.startFromCLIArgs(args);
+      Optional<PortalNode> maybeNode = Samba.startFromCLIArgs(args);
       maybeNode.ifPresent(
           node ->
               Runtime.getRuntime()
                   .addShutdownHook(
                       new Thread(
                           () -> {
-                            System.out.println("Samba is shutting down");
+                            LOG.info("Samba is shutting down");
                             node.stop();
+                            LogConfigurator.shutdown();
                           })));
+      return maybeNode
+          .map(PortalNode::getSambaSDK)
+          .orElseThrow(() -> new IllegalStateException("Failed to initialize SambaSDK"));
     } catch (CLIException e) {
       System.exit(e.getResultCode());
+      return null; // unreachable, but required to compile
     }
   }
 
-  static Optional<Node> startFromCLIArgs(final String[] cliArgs) throws CLIException {
-    AtomicReference<Node> nodeRef = new AtomicReference<>();
+  static Optional<PortalNode> startFromCLIArgs(final String[] cliArgs) throws CLIException {
+    AtomicReference<PortalNode> nodeRef = new AtomicReference<>();
     int result = start((config) -> nodeRef.set(start(config)), cliArgs);
     if (result != 0) {
       throw new CLIException(result);
@@ -48,10 +62,10 @@ public final class Samba {
     return new SambaCommand(outputWriter, errorWriter, System.getenv(), startAction).parse(args);
   }
 
-  private static Node start(final SambaConfiguration config) {
-    final Node node = new PortalNode(config);
-    node.start();
-    return node;
+  private static PortalNode start(final SambaConfiguration config) {
+    final PortalNode portalNode = new PortalNode(config);
+    portalNode.start();
+    return portalNode;
   }
 
   private static class CLIException extends RuntimeException {

@@ -1,11 +1,11 @@
 package samba.services.discovery;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import io.libp2p.core.multiformats.Multiaddr;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.apache.tuweni.units.bigints.UInt64;
@@ -14,7 +14,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 public interface Discv5Client {
 
-  CompletableFuture<Bytes> sendDisv5Message(NodeRecord nodeRecord, Bytes protocol, Bytes request);
+  CompletableFuture<Bytes> sendDiscv5Message(NodeRecord nodeRecord, Bytes protocol, Bytes request);
 
   SafeFuture<Collection<NodeRecord>> streamLiveNodes();
 
@@ -26,14 +26,23 @@ public interface Discv5Client {
 
   UInt64 getEnrSeq();
 
-  CompletableFuture<Collection<NodeRecord>> sendDiscv5FindNodes(
-      NodeRecord nodeRecord, List<Integer> distances);
-
   void updateCustomENRField(final String fieldName, final Bytes value);
 
-  NodeRecord updateNodeRecordSocket(Multiaddr multiaddr);
+  boolean updateEnrSocket(InetSocketAddress socketAddress, boolean isTCP);
 
   Optional<String> lookupEnr(final UInt256 nodeId);
 
   CompletableFuture<Void> ping(NodeRecord nodeRecord);
+
+  CompletableFuture<Collection<NodeRecord>> findNodes(
+      final NodeRecord nodeRecord, final List<Integer> distances);
+
+  CompletableFuture<Bytes> talk(NodeRecord nodeRecord, Bytes protocol, Bytes request);
+
+  /** Live nodes are at the start of the list with not yet confirmed nodes at the end. */
+  List<List<NodeRecord>> getRoutingTable();
+
+  boolean addEnr(String enr);
+
+  boolean deleteEnr(String nodeId);
 }

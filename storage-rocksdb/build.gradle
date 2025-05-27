@@ -8,11 +8,11 @@ plugins {
 //version = '1.0.0'
 
 dependencies {
-  implementation libs.apache.logging.log4j.api
-  implementation libs.apache.logging.log4j.core
+  implementation libs.slf4j.api
   implementation libs.rocksdbjni
   implementation libs.prometheus.simpleclient
   implementation libs.apache.commons.lang3
+  implementation libs.jackson.datatype.jdk8
   implementation libs.besu.internal.plugin.api //TODO need to be removed
   implementation libs.besu.internal.metrics.core
   implementation libs.google.guava

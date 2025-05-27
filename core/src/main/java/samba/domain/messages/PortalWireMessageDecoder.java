@@ -19,7 +19,7 @@ import org.ethereum.beacon.discovery.schema.NodeRecord;
 public class PortalWireMessageDecoder {
 
   public static PortalWireMessage decode(
-      NodeRecord sourceNode, Bytes sszbytes) { // TODO change NodeRecord
+      NodeRecord sourceNode, Bytes sszbytes, int protocolVersion) { // TODO change NodeRecord
     checkNotNull(sourceNode, "SourceNode could not be null when decoding a Portal Wire Message");
     checkNotNull(sszbytes, "SSZBytes could not be null when decoding a Portal Wire Message");
     checkArgument(
@@ -39,7 +39,7 @@ public class PortalWireMessageDecoder {
       case FIND_CONTENT -> FindContent.fromSSZBytes(sszbytes);
       case CONTENT -> Content.fromSSZBytes(sszbytes, sourceNode);
       case OFFER -> Offer.fromSSZBytes(sszbytes);
-      case ACCEPT -> Accept.fromSSZBytes(sszbytes);
+      case ACCEPT -> Accept.fromSSZBytes(sszbytes, protocolVersion);
       default ->
           throw new RuntimeException(
               String.format(

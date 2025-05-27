@@ -2,6 +2,7 @@ package samba.storage;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import samba.config.StorageConfig;
 import samba.domain.content.ContentBlockBody;
 import samba.domain.content.ContentBlockHeader;
 import samba.domain.content.ContentKey;
@@ -10,51 +11,36 @@ import samba.domain.content.ContentType;
 import samba.domain.content.ContentUtil;
 import samba.rocksdb.KeyValueSegment;
 import samba.rocksdb.KeyValueStorageTransaction;
-import samba.rocksdb.RocksDBConfiguration;
 import samba.rocksdb.RocksDBInstance;
-import samba.rocksdb.RocksDBMetricsFactory;
+import samba.rocksdb.RocksDBKeyValueStorageFactory;
 import samba.rocksdb.Segment;
-import samba.rocksdb.exceptions.StorageException;
+import samba.validation.util.ValidationUtil;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HistoryRocksDB implements HistoryDB {
 
-  protected static final Logger LOG = LogManager.getLogger(HistoryRocksDB.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HistoryRocksDB.class);
   private final RocksDBInstance rocksDBInstance;
-
-  public HistoryRocksDB(
-      Path path, MetricsSystem metricsSystem, RocksDBMetricsFactory rocksDBMetricsFactory)
-      throws StorageException {
-    this.rocksDBInstance =
-        new RocksDBInstance(
-            RocksDBConfiguration.createDefault(path),
-            Arrays.asList(KeyValueSegment.values()),
-            List.of(),
-            metricsSystem,
-            rocksDBMetricsFactory);
-  }
 
   public HistoryRocksDB(RocksDBInstance rocksDBInstance) {
     this.rocksDBInstance = rocksDBInstance;
   }
 
-  public static HistoryRocksDB create(MetricsSystem metricsSystem, final Path dataDirectory) {
-    try {
-      StorageFactory storageFactory = new StorageFactory(metricsSystem, dataDirectory);
-      return storageFactory.create();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public HistoryRocksDB(
+      final Path dataPath, final StorageConfig storageConfig, MetricsSystem metricsSystem) {
+    this.rocksDBInstance =
+        RocksDBKeyValueStorageFactory.create(
+            dataPath,
+            storageConfig.getDatabasePath(),
+            storageConfig.getDatabaseFormat(),
+            metricsSystem);
   }
 
   @Override
@@ -64,36 +50,35 @@ public class HistoryRocksDB implements HistoryDB {
       switch (contentKey.getContentType()) {
         case ContentType.BLOCK_HEADER -> {
           Bytes blockHashKeySSZ = contentKey.getBlockHashSsz();
-          // TODO validate BLOCK_HEADER
           Optional<ContentBlockHeader> blockHeader =
               ContentUtil.createBlockHeaderfromSszBytes(sszValue);
-          if (blockHeader.isEmpty()) {
-            LOG.debug("BlockHeader for blockHashKey: {} is invalid", blockHashKeySSZ);
-            break;
+          if (blockHeader.isPresent() && ValidationUtil.isBlockHeaderValid(blockHeader.get())) {
+            Bytes blockNumberKeySSZ = ContentUtil.createBlockNumberInSSZ(blockHeader.get());
+            save(KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER, blockNumberKeySSZ, blockHashKeySSZ);
+            save(KeyValueSegment.BLOCK_HEADER, blockHashKeySSZ, sszValue); // TODO async
+          } else {
+            LOG.error("BlockHeader for blockHashKey: {} is invalid", blockHashKeySSZ);
           }
-          Bytes blockNumberKeySSZ = ContentUtil.createBlockNumberInSSZ(blockHeader.get());
-          save(KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER, blockNumberKeySSZ, blockHashKeySSZ);
-          save(KeyValueSegment.BLOCK_HEADER, blockHashKeySSZ, sszValue); // TODO async
         }
         case ContentType.BLOCK_BODY -> {
           Bytes blockHashSSZ = contentKey.getBlockHashSsz();
-          // TODO validate BLOCK_BODY
           save(KeyValueSegment.BLOCK_BODY, blockHashSSZ, sszValue);
         }
         case ContentType.RECEIPT -> {
           Bytes blockHashSSZ = contentKey.getBlockHashSsz();
-          // TODO validate RECEIPT
           save(KeyValueSegment.RECEIPT, blockHashSSZ, sszValue);
         }
         case ContentType.BLOCK_HEADER_BY_NUMBER -> {
           Bytes blockNumberKeySSZ = contentKey.getBlockNumberSsz();
-          // TODO validate BLOCK_HEADER_BY_NUMBER
           Optional<ContentBlockHeader> blockHeader =
               ContentUtil.createBlockHeaderfromSszBytes(sszValue);
-          Bytes blockHashKeySSZ = ContentUtil.createBlockHashKey(blockHeader.get());
-
-          save(KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER, blockNumberKeySSZ, blockHashKeySSZ);
-          save(KeyValueSegment.BLOCK_HEADER, blockHashKeySSZ, sszValue);
+          if (blockHeader.isPresent() && ValidationUtil.isBlockHeaderValid(blockHeader.get())) {
+            Bytes blockHashKeySSZ = ContentUtil.createBlockHashKey(blockHeader.get());
+            save(KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER, blockNumberKeySSZ, blockHashKeySSZ);
+            save(KeyValueSegment.BLOCK_HEADER, blockHashKeySSZ, sszValue);
+          } else {
+            LOG.error("BlockHeader for blockNumberKey: {} is invalid", blockNumberKeySSZ);
+          }
         }
         default ->
             throw new IllegalArgumentException(
@@ -101,7 +86,7 @@ public class HistoryRocksDB implements HistoryDB {
       }
       return true;
     } catch (Exception e) {
-      LOG.debug(
+      LOG.error(
           "Content could not be saved. ContentKey: {} , ContentValue: {}. Reason:",
           sszKey,
           sszValue,
@@ -166,6 +151,10 @@ public class HistoryRocksDB implements HistoryDB {
             .map(Bytes::wrap)
             .or(Optional::empty);
       }
+      case ContentType.EPHEMERAL_BLOCK_HEADER -> {
+        // TODO unsupported
+        yield Optional.empty();
+      }
     };
   }
 
@@ -180,7 +169,7 @@ public class HistoryRocksDB implements HistoryDB {
     KeyValueStorageTransaction tx = rocksDBInstance.startTransaction();
     tx.put(segment, key.toArray(), content.toArray());
     tx.commit();
-    LOG.info(
+    LOG.debug(
         "Saving on segment {}, Key: {} and Value: {} ",
         segment.getName(),
         key.toHexString(),
@@ -193,6 +182,7 @@ public class HistoryRocksDB implements HistoryDB {
       case ContentType.BLOCK_BODY -> KeyValueSegment.BLOCK_BODY;
       case ContentType.RECEIPT -> KeyValueSegment.RECEIPT;
       case ContentType.BLOCK_HEADER_BY_NUMBER -> KeyValueSegment.BLOCK_HASH_BY_BLOCK_NUMBER;
+      case ContentType.EPHEMERAL_BLOCK_HEADER -> KeyValueSegment.EPHEMERAL_BLOCK_HEADER;
     };
   }
 

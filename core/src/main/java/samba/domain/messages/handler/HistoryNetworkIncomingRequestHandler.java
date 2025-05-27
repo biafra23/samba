@@ -7,10 +7,12 @@ import samba.domain.messages.MessageType;
 import samba.domain.messages.PortalWireMessage;
 import samba.domain.messages.PortalWireMessageDecoder;
 import samba.network.NetworkType;
-import samba.network.history.HistoryNetworkIncomingRequests;
+import samba.network.history.api.HistoryNetworkProtocolMessageHandler;
+import samba.util.ProtocolVersionUtil;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -24,9 +26,9 @@ public class HistoryNetworkIncomingRequestHandler implements IncomingRequestHand
       LoggerFactory.getLogger(HistoryNetworkIncomingRequestHandler.class);
   private final Map<MessageType, PortalWireMessageHandler> historyMessageHandlers = new HashMap<>();
 
-  private HistoryNetworkIncomingRequests network;
+  private HistoryNetworkProtocolMessageHandler network;
 
-  public HistoryNetworkIncomingRequestHandler(final HistoryNetworkIncomingRequests network) {
+  public HistoryNetworkIncomingRequestHandler(final HistoryNetworkProtocolMessageHandler network) {
     this.network = network;
   }
 
@@ -43,7 +45,16 @@ public class HistoryNetworkIncomingRequestHandler implements IncomingRequestHand
         "TALKKREQ message is not from the {}",
         this.network.getNetworkType().getName());
 
-    PortalWireMessage message = PortalWireMessageDecoder.decode(srcNode, request);
+    Optional<Integer> protocolVersion =
+        ProtocolVersionUtil.getHighestSupportedProtocolVersion(
+            ProtocolVersionUtil.getSupportedProtocolVersions(srcNode));
+    if (protocolVersion.isEmpty()) {
+      LOG.debug("Protocol version(s) not compatible with node {}", srcNode.asEnr());
+      return CompletableFuture.completedFuture(Bytes.EMPTY);
+    }
+
+    PortalWireMessage message =
+        PortalWireMessageDecoder.decode(srcNode, request, protocolVersion.get());
     PortalWireMessageHandler handler = historyMessageHandlers.get(message.getMessageType());
     Bytes response = Bytes.EMPTY;
     if (handler != null) {

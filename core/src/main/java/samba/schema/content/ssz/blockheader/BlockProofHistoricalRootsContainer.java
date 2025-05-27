@@ -30,7 +30,7 @@ public class BlockProofHistoricalRootsContainer
         BlockProofHistoricalRootsContainerSchema.INSTANCE,
         SszBeaconBlockProofHistoricalRootsVector.createVector(beaconBlockProofHistoricalRoots),
         SszBytes32.of(blockRoot),
-        SszExecutionBlockProofVector.createVector(executionBlockProof),
+        SszExecutionBlockProofBellatrixVector.createVector(executionBlockProof),
         SszUInt64.of(slot));
   }
 
@@ -75,7 +75,7 @@ public class BlockProofHistoricalRootsContainer
       super(
           SszBeaconBlockProofHistoricalRootsVector.getSchema(),
           SszPrimitiveSchemas.BYTES32_SCHEMA,
-          SszExecutionBlockProofVector.getSchema(),
+          SszExecutionBlockProofBellatrixVector.getSchema(),
           SszPrimitiveSchemas.UINT64_SCHEMA);
     }
 

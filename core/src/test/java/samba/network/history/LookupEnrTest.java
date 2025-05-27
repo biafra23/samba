@@ -9,7 +9,8 @@ import static org.mockito.Mockito.when;
 
 import samba.TestHelper;
 import samba.domain.messages.response.Nodes;
-import samba.network.RoutingTable;
+import samba.network.history.api.HistoryNetworkInternalAPI;
+import samba.network.history.routingtable.RoutingTable;
 import samba.services.discovery.Discv5Client;
 import samba.services.utp.UTPManager;
 import samba.storage.HistoryDB;
@@ -32,7 +33,7 @@ import org.junit.platform.commons.util.ReflectionUtils;
 
 public class LookupEnrTest {
 
-  private HistoryJsonRpcRequests historyNetwork;
+  private HistoryNetworkInternalAPI historyNetwork;
   private NodeRecord nodeRecord;
   private RoutingTable routingTable;
   private Discv5Client discv5Client;
@@ -144,7 +145,7 @@ public class LookupEnrTest {
 
     when(this.discv5Client.getHomeNodeRecord()).thenReturn(TestHelper.createNodeRecord());
     when(this.routingTable.findNode(any(Bytes.class))).thenReturn(Optional.of(this.nodeRecord));
-    when(this.discv5Client.sendDisv5Message(
+    when(this.discv5Client.sendDiscv5Message(
             any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
         .thenAnswer(invocation -> CompletableFuture.failedFuture(new RuntimeException()));
 
@@ -157,7 +158,7 @@ public class LookupEnrTest {
   }
 
   private void whenFindNodes(List<String> enrs) {
-    when(this.discv5Client.sendDisv5Message(
+    when(this.discv5Client.sendDiscv5Message(
             any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
         .thenAnswer(
             invocation -> CompletableFuture.completedFuture((new Nodes(enrs)).getSszBytes()));
