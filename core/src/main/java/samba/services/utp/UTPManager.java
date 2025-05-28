@@ -125,6 +125,7 @@ public class UTPManager implements TransportLayer<UTPAddress> {
     if (utpClient != null) {
       utpClient.receivePacket(utpPacket, new UTPAddress(nodeRecord));
     } else {
+
       LOG.error("No UTPClient found when receiving packet: {}", utpPacket);
     }
   }

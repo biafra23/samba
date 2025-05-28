@@ -3,7 +3,6 @@ package samba.services.rest;
 import samba.api.rest.GetHealth;
 import samba.config.RestServerConfig;
 import samba.config.VersionProvider;
-//import samba.services.api.endpoints.health.GetHealth;
 import samba.services.exceptions.ServiceUnavailableException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
