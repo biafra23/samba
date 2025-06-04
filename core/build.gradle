@@ -7,8 +7,7 @@ plugins {
 //group = "com.github.biafra23.samba"
 
 jar {
-  archiveBaseName = 'samba'
-  archiveClassifier = 'core'
+  archiveBaseName = 'core'
   manifest {
     attributes(
       'Specification-Title': archiveBaseName,
