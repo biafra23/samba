@@ -178,13 +178,7 @@ subprojects {
   }
 }
 
-//jar { enabled = false }
-
-jar {
-  archiveBaseName.set('samba')
-  archiveVersion.set(version)
-  destinationDirectory.set(file("$buildDir/build/libs"))
-}
+jar { enabled = false }
 
 apply plugin: 'application'
 mainClassName = 'samba.Samba'
