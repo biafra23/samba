@@ -8,6 +8,7 @@ plugins {
 
 jar {
   archiveBaseName = 'samba'
+  archiveClassifier = 'core'
   manifest {
     attributes(
       'Specification-Title': archiveBaseName,

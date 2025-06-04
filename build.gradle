@@ -215,6 +215,7 @@ run {
 
 def archiveBuildVersion = project.hasProperty('release.releaseVersion') ? project.property('release.releaseVersion') : "${rootProject.version}"
 
+apply from: 'buildscripts/buildFatJar.gradle'
 apply from: 'buildscripts/startScripts.gradle'
 
 installDist { dependsOn untunedStartScripts }
@@ -224,8 +225,6 @@ ext.archiveBuildVersion = archiveBuildVersion
 apply from: 'buildscripts/buildTar.gradle'
 
 apply from: 'buildscripts/buildZip.gradle'
-
-apply from: 'buildscripts/buildFatJar.gradle'
 
 jacocoTestReport {
   reports {
