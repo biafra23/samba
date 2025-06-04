@@ -197,7 +197,7 @@ applicationDefaultJvmArgs = [
   "java.base/jdk.internal.misc=ALL-UNNAMED",
   "--add-opens",
   "java.base/java.nio=ALL-UNNAMED",
-  "-Dlog4j.configurationFile=core/src/main/resources/log4j2.xml"
+  //"-Dlog4j.configurationFile=core/src/main/resources/log4j2.xml"
 ]
 
 run {
