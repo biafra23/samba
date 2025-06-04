@@ -1,10 +1,12 @@
 package samba.services.utp;
 
+import samba.metrics.SambaMetricCategory;
 import samba.network.NetworkType;
 import samba.services.discovery.Discv5Client;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -18,6 +20,7 @@ import meldsun0.utp.data.UtpPacket;
 import meldsun0.utp.network.TransportLayer;
 import org.apache.tuweni.bytes.Bytes;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
@@ -32,9 +35,15 @@ public class UTPManager implements TransportLayer<UTPAddress> {
 
   private final ExecutorService utpExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-  public UTPManager(final Discv5Client discv5Client) {
+  public UTPManager(final Discv5Client discv5Client, final MetricsSystem metricsSystem) {
     this.discv5Client = discv5Client;
     this.connections = new ConcurrentHashMap<>();
+
+    metricsSystem.createIntegerGauge(
+        SambaMetricCategory.HISTORY,
+        "utp_active_connection_count",
+        "Current UTP connections",
+        this.connections::size);
   }
 
   public int acceptRead(NodeRecord nodeRecord, Consumer<Bytes> onContentReceived) {
@@ -60,19 +69,19 @@ public class UTPManager implements TransportLayer<UTPAddress> {
     return connectionId;
   }
 
-  public void offerWrite(final NodeRecord nodeRecord, final int connectionId, Bytes content) {
-    this.runAsyncUTP(
+  public SafeFuture<Void> offerWrite(NodeRecord nodeRecord, int connectionId, Bytes content) {
+    return runAsyncUTPWithFuture(
         () -> {
-          UTPClient utpClient = this.registerClient(nodeRecord, connectionId);
+          UTPClient utpClient = registerClient(nodeRecord, connectionId);
           utpClient
               .connect(connectionId, new UTPAddress(nodeRecord))
-              .thenCompose(__ -> utpClient.write(content, this.utpExecutor))
-              .get();
+              .thenCompose(__ -> utpClient.write(content, utpExecutor))
+              .join();
         },
         "offerWrite",
         nodeRecord,
         connectionId,
-        this.utpExecutor);
+        utpExecutor);
   }
 
   public int foundContentWrite(NodeRecord nodeRecord, Bytes content) {
@@ -186,6 +195,21 @@ public class UTPManager implements TransportLayer<UTPAddress> {
     SafeFuture.runAsync(
             () -> executeWithHandling(task, operationName, nodeRecord, connectionId), executor)
         .exceptionally(defaultUTPErrorLog(operationName, nodeRecord, connectionId));
+  }
+
+  private SafeFuture<Void> runAsyncUTPWithFuture(
+      RunnableUTP task,
+      String operationName,
+      NodeRecord nodeRecord,
+      int connectionId,
+      Executor executor) {
+
+    CompletableFuture<Void> future =
+        SafeFuture.runAsync(
+                () -> executeWithHandling(task, operationName, nodeRecord, connectionId), executor)
+            .exceptionally(defaultUTPErrorLog(operationName, nodeRecord, connectionId));
+
+    return SafeFuture.of(future);
   }
 
   private void executeWithHandling(

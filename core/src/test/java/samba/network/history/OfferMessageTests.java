@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -32,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
@@ -52,7 +54,8 @@ public class OfferMessageTests {
     this.discv5Client = mock(Discv5Client.class);
     this.utpManager = mock(UTPManager.class);
     this.nodeRecord = createNodeRecord();
-    this.historyNetwork = new HistoryNetwork(discv5Client, historyDB, utpManager);
+    this.historyNetwork =
+        new HistoryNetwork(discv5Client, historyDB, utpManager, mock(MetricsSystem.class));
     when(this.discv5Client.getNodeId()).thenReturn(Optional.of(createNodeRecord().getNodeId()));
     mockRoutingTableFindNode(this.historyNetwork);
     when(historyDB.isAvailable()).thenReturn(true);
@@ -249,7 +252,8 @@ public class OfferMessageTests {
     when(discv5Client.sendDiscv5Message(any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
         .thenReturn(createAcceptResponse(555, Bytes.of(1), 0));
     when(historyDB.get(any(ContentKey.class))).thenReturn(Optional.of(Bytes.of(0)));
-
+    when(utpManager.offerWrite(any(NodeRecord.class), anyInt(), any(Bytes.class)))
+        .thenReturn(SafeFuture.completedFuture(null));
     Offer offer = new Offer(List.of(DefaultContent.key3));
 
     Optional<Bytes> contentKeysBitList =
@@ -275,7 +279,8 @@ public class OfferMessageTests {
               any(NodeRecord.class), any(Bytes.class), any(Bytes.class)))
           .thenReturn(createAcceptResponse(777, Bytes.of(0), 1));
       when(historyDB.get(any(ContentKey.class))).thenReturn(Optional.of(Bytes.of(0)));
-
+      when(utpManager.offerWrite(any(NodeRecord.class), anyInt(), any(Bytes.class)))
+          .thenReturn(SafeFuture.completedFuture(null));
       Offer offer = new Offer(List.of(DefaultContent.key3));
       Optional<Bytes> contentKeysByteList =
           this.historyNetwork.offer(nodeRecord, List.of(DefaultContent.value3), offer).get();

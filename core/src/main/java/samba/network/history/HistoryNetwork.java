@@ -43,6 +43,7 @@ import samba.validation.util.ValidationUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -62,6 +63,7 @@ import org.ethereum.beacon.discovery.schema.IdentitySchemaV4Interpreter;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
 import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 import org.ethereum.beacon.discovery.util.Functions;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,10 +89,13 @@ public class HistoryNetwork extends BaseNetwork
   // default ping with standard arguments
 
   public HistoryNetwork(
-      final Discv5Client client, final HistoryDB historyDB, final UTPManager utpManager) {
+      final Discv5Client client,
+      final HistoryDB historyDB,
+      final UTPManager utpManager,
+      final MetricsSystem metricsSystem) {
     super(NetworkType.EXECUTION_HISTORY_NETWORK, client, UInt256.ONE);
     this.nodeRadius = UInt256.MAX_VALUE.subtract(1L); // TODO must come from argument
-    this.routingTable = new HistoryRoutingTable(client.getHomeNodeRecord(), this);
+    this.routingTable = new HistoryRoutingTable(client.getHomeNodeRecord(), this, metricsSystem);
     this.historyDB = historyDB;
     this.utpManager = utpManager;
     this.nodeRecordFactory = new NodeRecordFactory(new IdentitySchemaV4Interpreter());
@@ -328,12 +333,12 @@ public class HistoryNetwork extends BaseNetwork
                       .map(Util::addUnsignedLeb128SizeToData)
                       .toList();
 
-              Optional.ofNullable(contentToOffer)
-                  .filter(list -> !list.isEmpty())
-                  .ifPresent(
-                      list ->
-                          utpManager.offerWrite(
-                              nodeRecord, accept.getConnectionId(), Bytes.concatenate(list)));
+              if (contentToOffer != null && !contentToOffer.isEmpty()) {
+                return utpManager
+                    .offerWrite(
+                        nodeRecord, accept.getConnectionId(), Bytes.concatenate(contentToOffer))
+                    .thenApply(__ -> Optional.of(accept.getContentKeys()));
+              }
 
               return SafeFuture.completedFuture(Optional.of(accept.getContentKeys()));
             })
@@ -438,7 +443,8 @@ public class HistoryNetwork extends BaseNetwork
     return this.historyDB.saveContent(contentKey, contentValue);
   }
 
-  private Optional<ContentBlockHeader> getAssociatedBlockHeader(Bytes contentKey) {
+  private Optional<ContentBlockHeader> getAssociatedBlockHeader(
+      Bytes contentKey) { // TODO: fallback mechanism in case found block header is not valid
     try {
       Bytes blockHeaderKeySsz =
           Bytes.concatenate(Bytes.of(ContentType.BLOCK_HEADER.getByteValue()), contentKey.slice(1));
@@ -448,17 +454,44 @@ public class HistoryNetwork extends BaseNetwork
       if (blockHeaderBytes.isPresent()) {
         return ContentUtil.createBlockHeaderfromSszBytes(blockHeaderBytes.get());
       }
+      int SEARCH_ATTEMPTS = 3;
+      Set<NodeRecord> excludedNodes = new HashSet<>();
+      for (int i = 0; i < SEARCH_ATTEMPTS; i++) {
+        RecursiveLookupTaskFindContent task =
+            new RecursiveLookupTaskFindContent(
+                this,
+                blockHeaderKey.getSszBytes(),
+                this.discv5Client.getHomeNodeRecord().getNodeId(),
+                getFoundNodes(blockHeaderKey),
+                DEFAULT_TIMEOUT);
+        Optional<FindContentResult> searchResult = task.execute().join();
 
-      Optional<FindContentResult> searchResult = getContent(blockHeaderKey, DEFAULT_TIMEOUT);
-      if (searchResult.isPresent()) {
-        Optional<ContentBlockHeader> blockHeader =
-            ContentUtil.createBlockHeaderfromSszBytes(
-                Bytes.fromHexString(searchResult.get().getContent()));
-        this.store(
-            blockHeaderKeySsz, blockHeader.get().getSszBytes()); // Store newly located block header
-        return blockHeader;
+        if (searchResult.isPresent()) {
+          Optional<ContentBlockHeader> blockHeader =
+              ContentUtil.createBlockHeaderfromSszBytes(
+                  Bytes.fromHexString(searchResult.get().getContent()));
+          if (this.store(blockHeaderKeySsz, blockHeader.get().getSszBytes())) {
+            LOG.debug(
+                "Found and stored block header for content key {}: {}",
+                contentKey,
+                blockHeaderKey.getSszBytes().toHexString());
+            this.gossip(
+                task.getInterestedNodes(),
+                blockHeaderKey.getSszBytes(),
+                Bytes.fromHexString(searchResult.get().getContent())); // POKE Mechanism
+            return blockHeader; // Store newly located block header
+          }
+          LOG.debug(
+              "Found Header for content key {} invalid, trying other peers",
+              contentKey,
+              blockHeaderKey);
+        }
+        if (task.getRespondingNode().isPresent()) excludedNodes.add(task.getRespondingNode().get());
       }
-
+      LOG.debug(
+          "Could not find associated block header for content key {} after {} attempts",
+          contentKey,
+          SEARCH_ATTEMPTS);
       return Optional.empty();
     } catch (Exception e) {
       LOG.debug("Error when retrieving associated block header for {}", contentKey, e);
@@ -745,6 +778,11 @@ public class HistoryNetwork extends BaseNetwork
     CompletableFuture<Optional<FindContentResult>> future = task.execute();
     try {
       Optional<FindContentResult> result = future.join();
+      if (result.isPresent() && result.get().getContent() != null)
+        this.gossip(
+            task.getInterestedNodes(),
+            contentKey.getSszBytes(),
+            Bytes.fromHexString(result.get().getContent())); // POKE Mechanism
       return result;
     } catch (Exception e) {
       LOG.error("Error when executing getContent", e);
@@ -766,6 +804,11 @@ public class HistoryNetwork extends BaseNetwork
     CompletableFuture<Optional<TraceGetContentResult>> future = task.execute();
     try {
       Optional<TraceGetContentResult> result = future.join();
+      if (result.isPresent() && result.get().getContent() != null)
+        this.gossip(
+            task.getInterestedNodes(),
+            contentKey.getSszBytes(),
+            Bytes.fromHexString(result.get().getContent())); // POKE Mechanism
       return result;
     } catch (Exception e) {
       LOG.error("Error when executing traceGetContent", e);

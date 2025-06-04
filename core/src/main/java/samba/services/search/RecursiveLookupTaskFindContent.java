@@ -8,6 +8,7 @@ import samba.api.jsonrpc.results.FindContentResult;
 import samba.domain.messages.requests.FindContent;
 import samba.network.history.HistoryNetwork;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +17,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.ethereum.beacon.discovery.schema.NodeRecord;
+import org.hyperledger.besu.crypto.Hash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +36,9 @@ public class RecursiveLookupTaskFindContent {
   private final Set<NodeRecord> foundNodes = new HashSet<>();
   private Optional<FindContentResult> content = Optional.empty();
   private final int timeout;
+  private final Set<NodeRecord> interestedNodes = new HashSet<>();
+  private final Set<NodeRecord> excludedNodes = new HashSet<>();
+  private Optional<NodeRecord> respondingNode;
 
   public RecursiveLookupTaskFindContent(
       final HistoryNetwork historyNetwork,
@@ -40,11 +46,22 @@ public class RecursiveLookupTaskFindContent {
       final Bytes homeNodeId,
       final Set<NodeRecord> foundNodes,
       final int timeout) {
+    this(historyNetwork, contentKey, homeNodeId, foundNodes, Set.of(), timeout);
+  }
+
+  public RecursiveLookupTaskFindContent(
+      final HistoryNetwork historyNetwork,
+      final Bytes contentKey,
+      final Bytes homeNodeId,
+      final Set<NodeRecord> foundNodes,
+      final Set<NodeRecord> excludedNodes,
+      final int timeout) {
     this.historyNetwork = historyNetwork;
     this.contentKey = contentKey;
     this.queriedNodeIds.add(homeNodeId);
     this.foundNodes.addAll(foundNodes);
     this.timeout = timeout;
+    this.excludedNodes.addAll(excludedNodes);
   }
 
   public CompletableFuture<Optional<FindContentResult>> execute() {
@@ -58,6 +75,7 @@ public class RecursiveLookupTaskFindContent {
       return;
     }
     if (content.isPresent()) {
+      LOG.error("No nodes left to query");
       future.complete(content);
       return;
     }
@@ -69,7 +87,7 @@ public class RecursiveLookupTaskFindContent {
             .collect(Collectors.toList());
 
     if (nodesToQuery.isEmpty()) {
-      future.completeExceptionally(new RuntimeException("No nodes left to query."));
+      future.complete(content);
       return;
     }
 
@@ -96,18 +114,25 @@ public class RecursiveLookupTaskFindContent {
                   LOG.debug("Node {} returned empty result", peer.getNodeId());
                 } else {
                   FindContentResult contentResult = result.get();
-                  if (contentResult.getContent() != null) {
+                  if (contentResult.getContent() != null && !excludedNodes.contains(peer)) {
+                    this.respondingNode = Optional.of(peer);
                     content = Optional.of(contentResult);
                     future.complete(content);
                     return;
                   }
                   // Add nodes to foundNodes and continue searching
                   foundNodes.addAll(
-                      contentResult.getEnrs().stream()
+                      Optional.ofNullable(contentResult.getEnrs())
+                          .orElseGet(Collections::emptyList)
+                          .stream()
                           .map(historyNetwork::nodeRecordFromEnr)
                           .flatMap(Optional::stream)
                           .filter(node -> !queriedNodeIds.contains(node.getNodeId()))
                           .collect(Collectors.toSet()));
+                  UInt256 peerDistance =
+                      UInt256.fromBytes(peer.getNodeId().xor(Hash.sha256(contentKey)));
+                  if (peerDistance.lessOrEqualThan(historyNetwork.getRadiusFromNode(peer)))
+                    interestedNodes.add(peer);
                 }
                 sendRequests();
               }
@@ -121,5 +146,13 @@ public class RecursiveLookupTaskFindContent {
               }
               return null;
             });
+  }
+
+  public Set<NodeRecord> getInterestedNodes() {
+    return interestedNodes;
+  }
+
+  public Optional<NodeRecord> getRespondingNode() {
+    return respondingNode;
   }
 }
