@@ -81,8 +81,7 @@ public class HistoryNetwork extends BaseNetwork
   private final UTPManager utpManager;
 
   public static final int MAX_GOSSIP_COUNT = 4;
-  private static final ExecutorService EXECUTOR_GOSSIP =
-      Executors.newVirtualThreadPerTaskExecutor();
+  private static final ExecutorService EXECUTOR_GOSSIP = Executors.newCachedThreadPool();
   private static final int DEFAULT_TIMEOUT = 60;
 
   // TODO standard client version text, standard capabilities list, standard client info extension,
