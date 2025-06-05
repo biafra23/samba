@@ -33,7 +33,7 @@ public class UTPManager implements TransportLayer<UTPAddress> {
   private final Map<String, UTPClient> connections;
   private final Discv5Client discv5Client;
 
-  private final ExecutorService utpExecutor = Executors.newVirtualThreadPerTaskExecutor();
+  private final ExecutorService utpExecutor = Executors.newCachedThreadPool();
 
   public UTPManager(final Discv5Client discv5Client, final MetricsSystem metricsSystem) {
     this.discv5Client = discv5Client;
