@@ -17,10 +17,6 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
   throw new GradleException("Java 21 or later is required to build Samba.\n" + "Detected version ${JavaVersion.current()}")
 }
 
-group = "com.github.biafra23.samba"
-
-//version = '1.0.0'
-
 defaultTasks 'build', 'javadoc'
 
 apply from: 'buildscripts/buildAliases.gradle'
