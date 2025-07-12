@@ -17,6 +17,8 @@ if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)) {
   throw new GradleException("Java 21 or later is required to build Samba.\n" + "Detected version ${JavaVersion.current()}")
 }
 
+group = 'samba'
+
 defaultTasks 'build', 'javadoc'
 
 apply from: 'buildscripts/buildAliases.gradle'
@@ -218,9 +220,9 @@ installDist { dependsOn untunedStartScripts }
 
 ext.archiveBuildVersion = archiveBuildVersion
 
-apply from: 'buildscripts/buildTar.gradle'
+//apply from: 'buildscripts/buildTar.gradle'
 
-apply from: 'buildscripts/buildZip.gradle'
+//apply from: 'buildscripts/buildZip.gradle'
 
 jacocoTestReport {
   reports {
@@ -400,19 +402,13 @@ def calculateVersion() {
   if (project.hasProperty('version') && (project.version =~ calVerPattern)) {
     if (project.hasProperty('versionappendcommit') && project.versionappendcommit == "true") {
       def gitDetails = getGitCommitDetails(7) // Adjust length as needed
-      println "-> Version: ${project.version}-${gitDetails.hash}"
       return "${project.version}-${gitDetails.hash}"
     }
-    println "-> Version: ${project.version}"
-
     return "${project.version}"
   } else {
     // If no version is supplied or it doesn't match the semantic versioning, calculate from git
     println("Generating project version as supplied is version not semver: ${project.version}")
     def gitDetails = getGitCommitDetails(7) // Adjust length as needed
-
-    println "-> Version: ${gitDetails.date}-develop-${gitDetails.hash}"
-
     return "${gitDetails.date}-develop-${gitDetails.hash}"
   }
 }

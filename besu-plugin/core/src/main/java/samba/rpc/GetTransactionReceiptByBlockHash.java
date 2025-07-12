@@ -1,20 +1,22 @@
 package samba.rpc;
 
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
-import org.hyperledger.besu.ethereum.core.BlockBody;
+import org.hyperledger.besu.plugin.data.TransactionReceipt;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import samba.BesuSambaPlugin;
 import samba.SambaSDK;
 
-public class GetBlockBodyByBlockHash implements PluginRpcMethod {
+public class GetTransactionReceiptByBlockHash implements PluginRpcMethod {
 
   private final CompletableFuture<SambaSDK> sambaSDKFuture;
 
-  public GetBlockBodyByBlockHash(CompletableFuture<SambaSDK> sambaSDKFuture) {
+  public GetTransactionReceiptByBlockHash(CompletableFuture<SambaSDK> sambaSDKFuture) {
     this.sambaSDKFuture = sambaSDKFuture;
   }
 
@@ -25,7 +27,7 @@ public class GetBlockBodyByBlockHash implements PluginRpcMethod {
 
   @Override
   public String getName() {
-    return RpcMethod.GET_BLOCK_BODY_BY_BLOCK_HASH.getMethodName();
+    return RpcMethod.GET_TRANSACTION_RECEIPT_BY_BLOCK_HASH.getMethodName();
   }
 
   @Override
@@ -36,9 +38,13 @@ public class GetBlockBodyByBlockHash implements PluginRpcMethod {
       return this.sambaSDKFuture
           .get()
           .historyAPI()
-          .flatMap(history -> history.getBlockBodyByBlockHash(blockHash))
-          .map(BlockBody::toString)
-          .orElse("");
+          .flatMap(history -> history.getTransactionReceiptByBlockHash(blockHash))
+          .map(
+              transactionReceipts ->
+                  transactionReceipts.stream()
+                      .map(TransactionReceipt::toString)
+                      .collect(Collectors.toList()))
+          .orElse(Collections.emptyList());
     } catch (JsonRpcParameter.JsonRpcParameterException
         | ExecutionException
         | InterruptedException e) {

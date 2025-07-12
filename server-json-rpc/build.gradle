@@ -8,12 +8,10 @@ plugins {
 //version = '1.0.0'
 
 dependencies {
-  implementation libs.slf4j.api
   implementation libs.vertx.core
   implementation libs.vertx.web
   implementation libs.tuweni.bytes
 
-  implementation libs.google.guava
   implementation libs.jackson.dataformat.yaml
   implementation libs.jackson.datatype.jdk8
 }

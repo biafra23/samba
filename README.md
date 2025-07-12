@@ -52,13 +52,14 @@ After a successful build, distribution packages are available in `build/distribu
 
 ### Other Useful Gradle Targets
 
-| Target       | Builds                                                  |
-|--------------|---------------------------------------------------------|
-| distTar      | Full distribution in build/distributions (as `.tar.gz`) |
-| distZip      | Full distribution in build/distributions (as `.zip`)    |
-| distDocker   | The `meldsun/samba` docker image                        |
-| dockerUpload | Push imges to Docker Hub                                |
-| runContainer | A docker container running                              |
+| Target             | Builds                                                  |
+|--------------------|---------------------------------------------------------|
+| distTar            | Full distribution in build/distributions (as `.tar.gz`) |
+| distZip            | Full distribution in build/distributions (as `.zip`)    |
+| distDocker         | The `meldsun/samba` docker image                        |
+| fatJarAllPlatforms | It creates fatJars for multiple platforms               |
+| dockerUpload       | Push imges to Docker Hub                                |
+| runContainer       | A docker container running                              |
 
 ## Code Style
 
@@ -125,9 +126,9 @@ View logs output and results:
 ```shell script
 ./hiveview --serve --logdir ./workspace/logs
 ```
-## [JSON-RPC API (20)](https://samba-portal-node.postman.co/workspace/Samba-Portal-Node-Workspace~8bf54719-5e6d-4476-8b33-6434dc57d833/request/33150235-eb63c4bf-82ff-477e-a17d-616657e9cdbc?action=share&creator=33150235&ctx=documentation&active-environment=33150235-5c222146-bd60-431b-bb15-f3f9dc8fc9cc)
+## [JSON-RPC API (23)](https://samba-portal-node.postman.co/workspace/Samba-Portal-Node-Workspace~8bf54719-5e6d-4476-8b33-6434dc57d833/request/33150235-eb63c4bf-82ff-477e-a17d-616657e9cdbc?action=share&creator=33150235&ctx=documentation&active-environment=33150235-5c222146-bd60-431b-bb15-f3f9dc8fc9cc)
 
-#### History
+#### History (15)
 - portal_historyAddEnr
 - portal_historyDeleteEnr
 - portal_historyFindContent
@@ -140,8 +141,11 @@ View logs output and results:
 - portal_historyPing
 - portal_historyStore
 - portal_historyPutContent
+- portal_historyRoutingTableInfo
+- portal_historyRecursiveFindNodes
+- portal_historyTraceGetContent
 
-#### Discv5
+#### Discv5 (8)
 - discv5_getEnr,
 - discv5_nodeInfo, 
 - discv5_updateNodeInfo
@@ -151,13 +155,23 @@ View logs output and results:
 - discv5_addEnr
 - discv5_deleteEnr
 
+#### Beacon
+  - portal_beaconStore
+
+##### Pending
+- discv5_ping: In order to implement it there is a refactor to be made on the library we are using:
+    - [Discord conversation](https://discord.com/channels/697535391594446898/1050616638497640548/1381765398889758931)
+    - [Issue](https://github.com/Consensys/discovery/issues/195)
+- discv5_lookupEnr: Soon
+- discv5_recursiveFindNodes: Soon
+
 When running against Hive:
 ```shell script
-./hive -sim portal -client samba,trin -sim.limit history
+./hive -sim portal -client samba,shisui -sim.limit history
 ```
 You should be getting: 
 
-![Tests](https://github.com/user-attachments/assets/9c812ad3-cd17-4abc-9f29-70991a80a71a)
+![Tests](https://github.com/user-attachments/assets/daa19e4e-b6b3-4547-8de4-2536d5dad59a)
 
 ## CLI options
 

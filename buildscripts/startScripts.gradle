@@ -1,5 +1,5 @@
 startScripts {
-    dependsOn fatJar
+//    dependsOn fatJar
     defaultJvmOpts = applicationDefaultJvmArgs + [
             "-XX:G1ConcRefinementThreads=2",
             "-XX:G1HeapWastePercent=15",
@@ -13,7 +13,7 @@ startScripts {
 }
 
 tasks.register('untunedStartScripts', CreateStartScripts) {
-    dependsOn fatJar
+//    dependsOn fatJar
     println "Executing task: ${name}"
     mainClass = 'samba.Samba'
     classpath = startScripts.classpath

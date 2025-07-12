@@ -23,7 +23,7 @@ public final class Samba {
   }
 
   public static SambaSDK init(String[] args) {
-    LOG.info("Received arguments: {}", Arrays.toString(args));
+    LOG.info("---===> Received arguments: {}", Arrays.toString(args));
     Thread.setDefaultUncaughtExceptionHandler(new SambaDefaultExceptionHandler());
     try {
       Optional<PortalNode> maybeNode = Samba.startFromCLIArgs(args);

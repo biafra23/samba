@@ -3,9 +3,14 @@ package samba;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.auto.service.AutoService;
+import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.core.BlockBody;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -17,10 +22,13 @@ import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import samba.api.HistoryService;
 import samba.rpc.GetBlockBodyByBlockHash;
+import samba.rpc.GetBlockHeaderByBlockHash;
+import samba.rpc.GetTransactionReceiptByBlockHash;
 
 @AutoService(BesuPlugin.class)
-public class BesuSambaPlugin implements BesuPlugin {
+public class BesuSambaPlugin implements BesuPlugin, HistoryService {
   private static final Logger LOG = LoggerFactory.getLogger(BesuSambaPlugin.class);
   public static final String PLUGIN_NAME = "samba";
   private static final String CLI_OPTIONS_PREFIX = "--plugin-" + PLUGIN_NAME + "-";
@@ -112,7 +120,12 @@ public class BesuSambaPlugin implements BesuPlugin {
   }
 
   private void starRpcEndpoints() {
-    var methods = List.of(new GetBlockBodyByBlockHash(this.sambaSDKFuture));
+    var methods =
+        List.of(
+            new GetBlockBodyByBlockHash(this.sambaSDKFuture),
+            new GetBlockHeaderByBlockHash(this.sambaSDKFuture),
+            new GetTransactionReceiptByBlockHash(this.sambaSDKFuture),
+            new GetTransactionReceiptByBlockHash(this.sambaSDKFuture));
     methods.forEach(
         method -> {
           LOG.info(
@@ -131,33 +144,56 @@ public class BesuSambaPlugin implements BesuPlugin {
                     "Unable to find given Besu service. Please ensure %s is registered."
                         .formatted(clazz.getName())));
   }
-}
 
-/*
   @Override
   public Optional<BlockHeader> getBlockHeaderByBlockHash(Hash blockHash) {
-    return this.sambaSDK
-        .historyAPI()
-        .flatMap(history -> history.getBlockHeaderByBlockHash(blockHash));
+    try {
+      return this.sambaSDKFuture
+          .get()
+          .historyAPI()
+          .flatMap(history -> history.getBlockHeaderByBlockHash(blockHash));
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.debug("Error when executing GetBlockHeaderByBlockHash operation");
+    }
+    return Optional.empty();
   }
 
   @Override
   public Optional<BlockBody> getBlockBodyByBlockHash(Hash blockHash) {
-    return this.sambaSDK
-        .historyAPI()
-        .flatMap(history -> history.getBlockBodyByBlockHash(blockHash));
+    try {
+      return this.sambaSDKFuture
+          .get()
+          .historyAPI()
+          .flatMap(history -> history.getBlockBodyByBlockHash(blockHash));
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.debug("Error when executing GetBlockBodyByBlockHash operation");
+    }
+    return Optional.empty();
   }
 
   @Override
   public Optional<List<TransactionReceipt>> getTransactionReceiptByBlockHash(Hash blockHash) {
-    return this.sambaSDK.historyAPI().flatMap(history -> history.getReceiptByBlockHash(blockHash));
+    try {
+      return this.sambaSDKFuture
+          .get()
+          .historyAPI()
+          .flatMap(history -> history.getTransactionReceiptByBlockHash(blockHash));
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.debug("Error when executing GetTransactionReceiptByBlockHash operation");
+    }
+    return Optional.empty();
   }
 
   @Override
-  public Optional<BlockHeader> getBlockHeaderByBlockNumber(long blockNumber) {
-    return this.sambaSDK
-        .historyAPI()
-        .flatMap(history -> history.getBlockHeaderByBlockNumber(blockNumber));
+  public Optional<BlockHeader> getBlockHeaderByBlockNumber(String blockNumber) {
+    try {
+      return this.sambaSDKFuture
+          .get()
+          .historyAPI()
+          .flatMap(history -> history.getBlockHeaderByBlockNumber(blockNumber));
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.debug("Error when executing  GetBlockHeaderByBlockNumber operation");
+    }
+    return Optional.empty();
   }
 }
-*/

@@ -816,6 +816,11 @@ public class HistoryNetwork extends BaseNetwork
   }
 
   @Override
+  public List<List<NodeRecord>> getRoutingTable() {
+    return this.routingTable.getNodeRecordBuckets();
+  }
+
+  @Override
   public Optional<RecursiveFindNodesResult> recursiveFindNodes(
       final String nodeId, Set<NodeRecord> excludedNodes, final int timeout) {
     Bytes nodeIdBytes = Bytes.fromHexString(nodeId);
