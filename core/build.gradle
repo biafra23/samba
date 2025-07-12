@@ -5,6 +5,7 @@ plugins {
 }
 
 //group = "com.github.biafra23.samba"
+version = '1.0-SNAPSHOT'
 
 jar {
   archiveBaseName = 'core'
